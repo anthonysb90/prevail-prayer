@@ -8,7 +8,8 @@
       "developmentClient": true,
       "distribution": "internal",
       "ios": {
-        "simulator": false
+        "simulator": false,
+        "image": "latest"
       },
       "android": {
         "buildType": "apk"
@@ -17,7 +18,8 @@
     "preview": {
       "distribution": "internal",
       "ios": {
-        "simulator": true
+        "simulator": true,
+        "image": "latest"
       },
       "android": {
         "buildType": "apk"
@@ -26,7 +28,8 @@
     "production": {
       "autoIncrement": true,
       "ios": {
-        "enterpriseProvisioning": "universal"
+        "enterpriseProvisioning": "universal",
+        "image": "latest"
       }
     }
   },
