@@ -110,6 +110,71 @@ export interface PrayerSession {
   completed_at: string | null;
 }
 
+// ─── Devotions ───────────────────────────────────────────────────────────────
+
+export interface Devotion {
+  id: string;
+  title: string;
+  image_url: string | null;
+  scripture_reference: string | null;
+  scripture_text: string | null;
+  body: string;
+  closing_prayer: string | null;
+  is_published: boolean;
+  published_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  questions?: DevotionQuestion[];
+}
+
+export interface DevotionQuestion {
+  id: string;
+  devotion_id: string;
+  question_text: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface DevotionResponse {
+  id: string;
+  devotion_id: string;
+  user_id: string;
+  journal_entry_id: string | null;
+  responses: Array<{ question_id: string; question_text: string; answer: string }>;
+  created_at: string;
+}
+
+// ─── Music ───────────────────────────────────────────────────────────────────
+
+export interface MusicTrack {
+  id: string;
+  title: string;
+  artist: string | null;
+  file_url: string | null;
+  cover_art_url: string | null;
+  duration_seconds: number | null;
+  is_bundled: boolean;
+  is_available: boolean;
+  sort_order: number;
+  file_size_bytes: number | null;
+  created_at: string;
+}
+
+// ─── Announcements ───────────────────────────────────────────────────────────
+
+export type AnnouncementType = "info" | "prayer" | "emergency" | "update";
+
+export interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  type: AnnouncementType;
+  sent_at: string | null;
+  sent_by: string | null;
+  created_at: string;
+}
+
 // ─── Support ─────────────────────────────────────────────────────────────────
 
 export type SupportAction = "dismissed" | "supported" | "rated" | "shared";
