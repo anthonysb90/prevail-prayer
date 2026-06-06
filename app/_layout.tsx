@@ -11,7 +11,7 @@ import { initializePurchases, getSubscriptionStatus } from "@/lib/purchases";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { PaywallScreen } from "@/components/ui/PaywallScreen";
 import { registerPushToken } from "@/lib/notifications";
-import { useRouter as useRouterHook } from "expo-router";
+import { SupportPromptModal } from "@/components/ui/SupportPromptModal";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -120,6 +120,7 @@ export default function RootLayout() {
       <StatusBar style="dark" />
       <AuthGuard />
       <PaywallScreen />
+      <SupportPromptModal />
     </QueryClientProvider>
   );
 }

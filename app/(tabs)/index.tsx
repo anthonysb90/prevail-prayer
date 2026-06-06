@@ -12,7 +12,7 @@ import {
   useActivePrayers, useOngoingPrayers,
   useAnsweredPrayers, usePrayerCounts,
 } from "@/hooks/usePrayers";
-import { useLatestDevotion } from "@/hooks/useDevotions";
+import { useLatestDevotion, useDevotions } from "@/hooks/useDevotions";
 import { PrayerCard } from "@/components/prayer/PrayerCard";
 import { FEATURED_VERSES } from "@/constants/verses";
 
@@ -213,7 +213,8 @@ export default function HomeScreen() {
   const { data: ongoing = [],  refetch: refetchOngoing } = useOngoingPrayers();
   const { data: answered = [], refetch: refetchAnswered } = useAnsweredPrayers();
   const { data: counts,        refetch: refetchCounts  } = usePrayerCounts();
-  const {                      refetch: refetchDevotion } = useLatestDevotion();
+  const { refetch: refetchDevotion } = useLatestDevotion();
+  const { data: devotions = [] } = useDevotions();
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -282,6 +283,18 @@ export default function HomeScreen() {
 
       {/* Today's Devotion card */}
       <DevotionCard />
+
+      {/* See all devotions link */}
+      {devotions.length > 0 && (
+        <TouchableOpacity
+          onPress={() => router.push("/devotions")}
+          style={{ paddingHorizontal: 24, marginBottom: 8, marginTop: -16, alignItems: "flex-end" }}
+        >
+          <Text style={{ fontFamily: "DMSans-Medium", fontSize: 13, color: "#F5B942" }}>
+            See all devotions →
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {/* Daily Verse */}
       <View

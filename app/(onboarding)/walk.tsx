@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
+import { supabase } from "@/lib/supabase";
+import { useAuthStore } from "@/stores/authStore";
 
 const OPTIONS = [
   "I feel far from God",
@@ -11,7 +13,9 @@ const OPTIONS = [
 
 export default function WalkScreen() {
   const router = useRouter();
+  const { user, fetchProfile } = useAuthStore();
   const [selected, setSelected] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
 
   const toggle = (option: string) => {
     setSelected((prev) =>
@@ -21,58 +25,105 @@ export default function WalkScreen() {
     );
   };
 
+  const handleContinue = async () => {
+    if (!user) { router.push("/(onboarding)/personalize"); return; }
+    setSaving(true);
+
+    if (selected.length > 0) {
+      await supabase
+        .from("profiles")
+        .update({ walk_with_god: selected })
+        .eq("id", user.id);
+
+      await fetchProfile(user.id);
+    }
+
+    setSaving(false);
+    router.push("/(onboarding)/personalize");
+  };
+
   return (
-    <View className="flex-1 bg-cream-100 px-6 pt-16 pb-10">
-      <TouchableOpacity onPress={() => router.push("/(tabs)")} className="self-end mb-8">
-        <Text className="text-charcoal-400 text-base" style={{ fontFamily: "DMSans-Medium" }}>
+    <View style={{ flex: 1, backgroundColor: "#F5F0E8", paddingHorizontal: 24 }}>
+      <TouchableOpacity
+        onPress={() => router.push("/(tabs)")}
+        style={{ alignSelf: "flex-end", paddingTop: 64, paddingBottom: 24 }}
+      >
+        <Text style={{ fontFamily: "DMSans-Medium", fontSize: 15, color: "#8A8A8A" }}>
           Skip
         </Text>
       </TouchableOpacity>
 
       <Text
-        className="text-charcoal-900 text-center mb-3"
-        style={{ fontFamily: "PlayfairDisplay-Bold", fontSize: 32 }}
+        style={{
+          fontFamily: "PlayfairDisplay-Bold",
+          fontSize: 30,
+          color: "#1A1A1A",
+          textAlign: "center",
+          lineHeight: 38,
+          marginBottom: 10,
+        }}
       >
         How's your walk with the Lord these days?
       </Text>
 
       <Text
-        className="text-charcoal-400 text-center text-sm mb-10"
-        style={{ fontFamily: "DMSans-Regular" }}
+        style={{
+          fontFamily: "DMSans-Regular",
+          fontSize: 14,
+          color: "#8A8A8A",
+          textAlign: "center",
+          marginBottom: 28,
+          lineHeight: 20,
+        }}
       >
         Your answers help us personalize Prevail Prayer for you.
       </Text>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <View className="gap-3">
+      <ScrollView
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 20 }}
+      >
+        <View style={{ gap: 10 }}>
           {OPTIONS.map((option) => {
             const isSelected = selected.includes(option);
             return (
               <TouchableOpacity
                 key={option}
-                className={`rounded-2xl px-5 py-4 flex-row items-center justify-between border ${
-                  isSelected
-                    ? "bg-charcoal-900 border-charcoal-900"
-                    : "bg-white border-cream-200"
-                }`}
+                style={{
+                  borderRadius: 16, paddingHorizontal: 20, paddingVertical: 18,
+                  flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+                  backgroundColor: isSelected ? "#1A1A1A" : "#FFFFFF",
+                  borderWidth: 1,
+                  borderColor: isSelected ? "#1A1A1A" : "#EDE5D8",
+                }}
                 onPress={() => toggle(option)}
                 activeOpacity={0.85}
               >
                 <Text
-                  className={`text-base flex-1 ${isSelected ? "text-white" : "text-charcoal-900"}`}
-                  style={{ fontFamily: "DMSans-Regular" }}
+                  style={{
+                    fontFamily: "DMSans-Regular",
+                    fontSize: 15,
+                    flex: 1,
+                    color: isSelected ? "#FFFFFF" : "#1A1A1A",
+                    lineHeight: 21,
+                  }}
                 >
                   {option}
                 </Text>
                 <View
-                  className={`w-6 h-6 rounded-full border-2 items-center justify-center ${
-                    isSelected
-                      ? "border-amber-400 bg-amber-400"
-                      : "border-cream-200"
-                  }`}
+                  style={{
+                    width: 24, height: 24, borderRadius: 12,
+                    borderWidth: 2,
+                    borderColor: isSelected ? "#F5B942" : "#EDE5D8",
+                    backgroundColor: isSelected ? "#F5B942" : "transparent",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginLeft: 12,
+                  }}
                 >
                   {isSelected && (
-                    <Text className="text-white text-xs">✓</Text>
+                    <Text style={{ color: "#FFFFFF", fontSize: 13, fontFamily: "DMSans-SemiBold" }}>✓</Text>
                   )}
                 </View>
               </TouchableOpacity>
@@ -82,13 +133,23 @@ export default function WalkScreen() {
       </ScrollView>
 
       <TouchableOpacity
-        className="bg-amber-400 rounded-full py-4 items-center mt-6"
-        onPress={() => router.push("/(onboarding)/personalize")}
+        style={{
+          backgroundColor: "#F5B942",
+          borderRadius: 100, paddingVertical: 18,
+          alignItems: "center", marginBottom: 44, marginTop: 16,
+          opacity: saving ? 0.7 : 1,
+        }}
+        onPress={handleContinue}
+        disabled={saving}
         activeOpacity={0.85}
       >
-        <Text className="text-white text-base" style={{ fontFamily: "DMSans-SemiBold" }}>
-          Continue
-        </Text>
+        {saving ? (
+          <ActivityIndicator color="#FFFFFF" />
+        ) : (
+          <Text style={{ fontFamily: "DMSans-SemiBold", fontSize: 16, color: "#FFFFFF" }}>
+            Continue
+          </Text>
+        )}
       </TouchableOpacity>
     </View>
   );
