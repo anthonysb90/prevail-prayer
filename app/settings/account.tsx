@@ -198,8 +198,7 @@ export default function AccountScreen() {
         </View>
 
         <Text style={{ fontFamily: "DMSans-Regular", fontSize: 12, color: "#8A8A8A", textAlign: "center" }}>
-          Prevail Prayer v1.0.0{"
-"}support@prevailprayer.com
+          Prevail Prayer v1.0.0{"\n"}support@prevailprayer.com
         </Text>
       </ScrollView>
     </View>

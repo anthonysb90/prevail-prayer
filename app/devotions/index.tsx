@@ -120,8 +120,7 @@ export default function DevotionsArchiveScreen() {
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }}>
           <Ionicons name="book-outline" size={48} color="#EDE5D8" />
           <Text style={{ fontFamily: "DMSans-Regular", fontSize: 15, color: "#8A8A8A", textAlign: "center", marginTop: 16, lineHeight: 22 }}>
-            No devotions published yet.{"
-"}Check back soon.
+            No devotions published yet.{"\n"}Check back soon.
           </Text>
         </View>
       ) : (

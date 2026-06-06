@@ -36,8 +36,7 @@ function JournalContent() {
         <View className="flex-1 items-center justify-center px-8">
           <Ionicons name="book-outline" size={48} color="#EDE5D8" />
           <Text className="text-charcoal-400 text-base text-center mt-4 leading-6" style={{ fontFamily: "DMSans-Regular" }}>
-            Your journal is empty.{"
-"}Start writing about what God is doing.
+            Your journal is empty.{"\n"}Start writing about what God is doing.
           </Text>
           <TouchableOpacity
             className="mt-6 bg-amber-400 rounded-full py-3 px-7"

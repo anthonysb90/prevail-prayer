@@ -60,8 +60,7 @@ export default function PrayScreen() {
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }}>
           <Ionicons name="list-outline" size={48} color="#2A2A2A" />
           <Text style={{ color: "#9A9A9A", fontSize: 16, fontFamily: "DMSans-Regular", textAlign: "center", marginTop: 16, lineHeight: 24 }}>
-            Your prayer list is empty.{"
-"}Add a request to begin.
+            Your prayer list is empty.{"\n"}Add a request to begin.
           </Text>
           <TouchableOpacity
             onPress={() => router.push("/prayer/new")}

@@ -5,24 +5,13 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
-import { Audio } from "expo-av";
 import { PremiumGate } from "@/components/ui/PremiumGate";
 import { AmbientTrack, BellInterval } from "@/types";
 import { useAuthStore } from "@/stores/authStore";
 import { useQueryClient } from "@tanstack/react-query";
 import { logPrayerSession, updatePrayerStreak } from "@/lib/streak";
 import { useSupportPrompt } from "@/hooks/useSupportPrompt";
-
-// ─── Audio file map ───────────────────────────────────────────────────────────
-
-const TRACK_FILES: Record<AmbientTrack, any> = {
-  "morning-still": require("@/assets/audio/onetent-morning-relaxing-144011.mp3"),
-  "deep-waters":   require("@/assets/audio/demiraliatilgan-ambient-music-part-01-205485.mp3"),
-  "holy-ground":   require("@/assets/audio/denis-pavlov-music-prayer-meditation-piano-holy-grace-heavenly-celestial-music-393549.mp3"),
-  "silence":       null,
-};
-
-const CHIME_FILE = require("@/assets/audio/Bonus Chime.mp3");
+import { useAmbientAudio } from "@/hooks/useAmbientAudio";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -72,79 +61,11 @@ function TimerContent() {
 
   const intervalRef  = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
-  const soundRef     = useRef<Audio.Sound | null>(null);
-  const chimeRef     = useRef<Audio.Sound | null>(null);
 
-  // ── Audio setup ─────────────────────────────────────────────────────────────
+  // ── Ambient audio + chime managed by hook ────────────────────────────────────
+  useAmbientAudio(track, bellInterval, running, remaining, duration);
 
-  useEffect(() => {
-    Audio.setAudioModeAsync({
-      staysActiveInBackground: true,
-      playsInSilentModeIOS: true,
-      shouldDuckAndroid: true,
-    });
-  }, []);
-
-  const loadAndPlayAmbient = async (trackId: AmbientTrack) => {
-    await stopAmbient();
-    const file = TRACK_FILES[trackId];
-    if (!file) return;
-    try {
-      const { sound } = await Audio.Sound.createAsync(file, {
-        isLooping: true,
-        volume: 0.65,
-      });
-      soundRef.current = sound;
-      await sound.playAsync();
-    } catch (e) {
-      console.warn("Audio load error:", e);
-    }
-  };
-
-  const stopAmbient = async () => {
-    if (soundRef.current) {
-      try {
-        await soundRef.current.stopAsync();
-        await soundRef.current.unloadAsync();
-      } catch {}
-      soundRef.current = null;
-    }
-  };
-
-  const playChime = async () => {
-    try {
-      if (chimeRef.current) {
-        await chimeRef.current.replayAsync();
-      } else {
-        const { sound } = await Audio.Sound.createAsync(CHIME_FILE, { volume: 0.9 });
-        chimeRef.current = sound;
-        await sound.playAsync();
-      }
-    } catch (e) {
-      console.warn("Chime error:", e);
-    }
-  };
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      stopAmbient();
-      chimeRef.current?.unloadAsync().catch(() => {});
-    };
-  }, []);
-
-  // ── Bell interval ────────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    if (!running || bellInterval === "off") return;
-    const elapsed = duration - remaining;
-    if (remaining === 0) {
-      playChime();
-      return;
-    }
-    if (bellInterval === "5min"  && elapsed > 0 && elapsed % 300 === 0) playChime();
-    if (bellInterval === "10min" && elapsed > 0 && elapsed % 600 === 0) playChime();
-  }, [remaining]);
+  useEffect(() => { setRemaining(duration); }, [duration]);
 
   // ── Timer tick ───────────────────────────────────────────────────────────────
 
@@ -170,8 +91,6 @@ function TimerContent() {
   // ── Session complete ─────────────────────────────────────────────────────────
 
   const handleComplete = async () => {
-    await stopAmbient();
-    if (bellInterval === "end-only" || bellInterval !== "off") playChime();
     if (!user || saving) return;
     setSaving(true);
     try {
@@ -185,17 +104,15 @@ function TimerContent() {
     setCompleted(true);
   };
 
-  const handleStart = async () => {
+  const handleStart = () => {
     startTimeRef.current = Date.now();
     setRemaining(duration);
     setCompleted(false);
     setRunning(true);
-    await loadAndPlayAmbient(track);
   };
 
   const handleStop = () => {
     setRunning(false);
-    stopAmbient();
     if (startTimeRef.current > 0) {
       Alert.alert(
         "End Session?",
@@ -203,7 +120,6 @@ function TimerContent() {
         [
           { text: "Keep Praying", style: "cancel", onPress: () => {
             setRunning(true);
-            loadAndPlayAmbient(track);
           }},
           { text: "End", style: "destructive" },
         ]
@@ -218,7 +134,7 @@ function TimerContent() {
       <StatusBar style="light" />
 
       <View style={{ paddingTop: 60, paddingHorizontal: 24, flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-        <TouchableOpacity onPress={() => { stopAmbient(); router.back(); }}>
+        <TouchableOpacity onPress={() => { setRunning(false); router.back(); }}>
           <Ionicons name="chevron-down" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={{ color: "#FFFFFF", fontFamily: "PlayfairDisplay-Bold", fontSize: 20 }}>

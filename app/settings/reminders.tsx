@@ -195,8 +195,7 @@ function RemindersContent() {
           <View style={{ backgroundColor: "#FFFFFF", borderRadius: 16, padding: 24, alignItems: "center" }}>
             <Ionicons name="notifications-outline" size={36} color="#EDE5D8" />
             <Text style={{ fontFamily: "DMSans-Regular", fontSize: 14, color: "#8A8A8A", textAlign: "center", marginTop: 12 }}>
-              No reminders yet.{"
-"}Tap + to add your first one.
+              No reminders yet.{"\n"}Tap + to add your first one.
             </Text>
           </View>
         ) : (
