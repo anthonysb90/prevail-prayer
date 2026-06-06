@@ -1,10 +1,10 @@
 import { View, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { PremiumGate } from "@/components/ui/PremiumGate";
 
-export default function JournalScreen() {
+function JournalContent() {
   const router = useRouter();
-
   return (
     <View className="flex-1 bg-cream-100">
       <View className="px-6 pt-16 pb-4">
@@ -12,11 +12,10 @@ export default function JournalScreen() {
           Prayer Journal
         </Text>
       </View>
-
       <View className="flex-1 items-center justify-center px-8">
         <Ionicons name="book-outline" size={48} color="#EDE5D8" />
         <Text className="text-charcoal-400 text-base text-center mt-4" style={{ fontFamily: "DMSans-Regular" }}>
-          Your journal entries will appear here. Reflect on what God is doing in your life.
+          Your journal entries will appear here.
         </Text>
         <TouchableOpacity
           className="mt-6 bg-amber-400 rounded-full py-3 px-7"
@@ -28,5 +27,17 @@ export default function JournalScreen() {
         </TouchableOpacity>
       </View>
     </View>
+  );
+}
+
+export default function JournalScreen() {
+  return (
+    <PremiumGate
+      feature="Prayer Journal"
+      description="Record your reflections, answered prayers, and what God is speaking to you. Linked directly to your prayer requests."
+      icon="book-outline"
+    >
+      <JournalContent />
+    </PremiumGate>
   );
 }

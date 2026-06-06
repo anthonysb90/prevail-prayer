@@ -6,35 +6,50 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
+import { initializePurchases, getSubscriptionStatus } from "@/lib/purchases";
+import { useSubscriptionStore } from "@/stores/subscriptionStore";
+import { PaywallScreen } from "@/components/ui/PaywallScreen";
 
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 1000 * 60 * 5 }, // 5 min
+    queries: { staleTime: 1000 * 60 * 5 },
   },
 });
 
 function AuthGuard() {
   const { session, isLoading, setSession, fetchProfile } = useAuthStore();
+  const { setIsPremium, setIsLoading } = useSubscriptionStore();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
         if (session?.user) {
           await fetchProfile(session.user.id);
+          // Initialize RevenueCat with the authenticated user's ID
+          await initializePurchases(session.user.id);
+          const premium = await getSubscriptionStatus();
+          setIsPremium(premium);
+          setIsLoading(false);
+        } else {
+          setIsLoading(false);
         }
       }
     );
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
-      if (session?.user) fetchProfile(session.user.id);
+      if (session?.user) {
+        await fetchProfile(session.user.id);
+        await initializePurchases(session.user.id);
+        const premium = await getSubscriptionStatus();
+        setIsPremium(premium);
+      }
+      setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -42,10 +57,7 @@ function AuthGuard() {
 
   useEffect(() => {
     if (isLoading) return;
-
     const inAuthGroup = segments[0] === "(auth)";
-    const inOnboardingGroup = segments[0] === "(onboarding)";
-
     if (!session && !inAuthGroup) {
       router.replace("/(auth)/welcome");
     } else if (session && inAuthGroup) {
@@ -75,6 +87,8 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <StatusBar style="dark" />
       <AuthGuard />
+      {/* Global paywall modal — accessible from anywhere in the app */}
+      <PaywallScreen />
     </QueryClientProvider>
   );
 }

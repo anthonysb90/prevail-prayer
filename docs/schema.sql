@@ -591,3 +591,13 @@ ON CONFLICT DO NOTHING;
 -- Seed categories: 10
 -- Seed verses: 60+ (KJV, public domain)
 -- ============================================================
+
+-- Migration: add_subscription_status
+-- Run after initial_schema.sql
+
+ALTER TABLE profiles
+  ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'free'
+    CHECK (subscription_status IN ('free', 'trial', 'premium', 'expired')),
+  ADD COLUMN IF NOT EXISTS trial_started_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMPTZ;
+
