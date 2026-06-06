@@ -15,7 +15,6 @@ import {
   purchasePackage,
   restorePurchases,
 } from "@/lib/purchases";
-import { PurchasesPackage } from "react-native-purchases";
 
 const PREMIUM_FEATURES = [
   {
@@ -42,7 +41,7 @@ const PREMIUM_FEATURES = [
 
 export function PaywallScreen() {
   const { paywallVisible, hidePaywall, setIsPremium } = useSubscriptionStore();
-  const [pkg, setPkg] = useState<PurchasesPackage | null>(null);
+  const [pkg, setPkg] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
