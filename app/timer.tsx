@@ -1,17 +1,30 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  View, Text, TouchableOpacity, ScrollView,
-  Alert, ActivityIndicator,
+  View, Text, TouchableOpacity, ScrollView, Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
+import { Audio } from "expo-av";
 import { PremiumGate } from "@/components/ui/PremiumGate";
 import { AmbientTrack, BellInterval } from "@/types";
 import { useAuthStore } from "@/stores/authStore";
 import { useQueryClient } from "@tanstack/react-query";
 import { logPrayerSession, updatePrayerStreak } from "@/lib/streak";
 import { useSupportPrompt } from "@/hooks/useSupportPrompt";
+
+// ─── Audio file map ───────────────────────────────────────────────────────────
+
+const TRACK_FILES: Record<AmbientTrack, any> = {
+  "morning-still": require("@/assets/audio/onetent-morning-relaxing-144011.mp3"),
+  "deep-waters":   require("@/assets/audio/demiraliatilgan-ambient-music-part-01-205485.mp3"),
+  "holy-ground":   require("@/assets/audio/denis-pavlov-music-prayer-meditation-piano-holy-grace-heavenly-celestial-music-393549.mp3"),
+  "silence":       null,
+};
+
+const CHIME_FILE = require("@/assets/audio/Bonus Chime.mp3");
+
+// ─── Config ───────────────────────────────────────────────────────────────────
 
 const DURATIONS = [
   { label: "5 min",  seconds: 300  },
@@ -22,10 +35,10 @@ const DURATIONS = [
 ];
 
 const TRACKS: { id: AmbientTrack; label: string }[] = [
-  { id: "morning-still", label: "Morning Still" },
-  { id: "deep-waters",   label: "Deep Waters"   },
-  { id: "holy-ground",   label: "Holy Ground"   },
-  { id: "silence",       label: "Silence"        },
+  { id: "morning-still", label: "Morning Still"  },
+  { id: "deep-waters",   label: "Deep Waters"    },
+  { id: "holy-ground",   label: "Holy Grace"     },
+  { id: "silence",       label: "Silence"         },
 ];
 
 const BELL_OPTIONS: { id: BellInterval; label: string }[] = [
@@ -41,6 +54,8 @@ function formatTime(seconds: number) {
   return m + ":" + s;
 }
 
+// ─── Timer content ────────────────────────────────────────────────────────────
+
 function TimerContent() {
   const router = useRouter();
   const { user } = useAuthStore();
@@ -55,12 +70,84 @@ function TimerContent() {
   const [completed, setCompleted] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const intervalRef  = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
+  const soundRef     = useRef<Audio.Sound | null>(null);
+  const chimeRef     = useRef<Audio.Sound | null>(null);
 
-  useEffect(() => { setRemaining(duration); }, [duration]);
+  // ── Audio setup ─────────────────────────────────────────────────────────────
 
-  // ── Timer tick ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    Audio.setAudioModeAsync({
+      staysActiveInBackground: true,
+      playsInSilentModeIOS: true,
+      shouldDuckAndroid: true,
+    });
+  }, []);
+
+  const loadAndPlayAmbient = async (trackId: AmbientTrack) => {
+    await stopAmbient();
+    const file = TRACK_FILES[trackId];
+    if (!file) return;
+    try {
+      const { sound } = await Audio.Sound.createAsync(file, {
+        isLooping: true,
+        volume: 0.65,
+      });
+      soundRef.current = sound;
+      await sound.playAsync();
+    } catch (e) {
+      console.warn("Audio load error:", e);
+    }
+  };
+
+  const stopAmbient = async () => {
+    if (soundRef.current) {
+      try {
+        await soundRef.current.stopAsync();
+        await soundRef.current.unloadAsync();
+      } catch {}
+      soundRef.current = null;
+    }
+  };
+
+  const playChime = async () => {
+    try {
+      if (chimeRef.current) {
+        await chimeRef.current.replayAsync();
+      } else {
+        const { sound } = await Audio.Sound.createAsync(CHIME_FILE, { volume: 0.9 });
+        chimeRef.current = sound;
+        await sound.playAsync();
+      }
+    } catch (e) {
+      console.warn("Chime error:", e);
+    }
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopAmbient();
+      chimeRef.current?.unloadAsync().catch(() => {});
+    };
+  }, []);
+
+  // ── Bell interval ────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!running || bellInterval === "off") return;
+    const elapsed = duration - remaining;
+    if (remaining === 0) {
+      playChime();
+      return;
+    }
+    if (bellInterval === "5min"  && elapsed > 0 && elapsed % 300 === 0) playChime();
+    if (bellInterval === "10min" && elapsed > 0 && elapsed % 600 === 0) playChime();
+  }, [remaining]);
+
+  // ── Timer tick ───────────────────────────────────────────────────────────────
+
   useEffect(() => {
     if (running) {
       intervalRef.current = setInterval(() => {
@@ -80,58 +167,58 @@ function TimerContent() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [running]);
 
-  // ── Session complete ────────────────────────────────────────────────────────
+  // ── Session complete ─────────────────────────────────────────────────────────
+
   const handleComplete = async () => {
+    await stopAmbient();
+    if (bellInterval === "end-only" || bellInterval !== "off") playChime();
     if (!user || saving) return;
     setSaving(true);
-
-    const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000);
-
     try {
+      const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000);
       const sessionCount = await logPrayerSession(user.id, elapsed, track);
       await updatePrayerStreak(user.id);
-
-      // Refresh profile (streak updated)
       qc.invalidateQueries({ queryKey: ["prayer_requests", user.id, "counts"] });
-
-      // Check support prompt every 5 sessions
       await checkAndShow("session_completed", sessionCount);
-    } catch { /* non-critical */ }
-
+    } catch {}
     setSaving(false);
     setCompleted(true);
   };
 
-  const handleStart = () => {
+  const handleStart = async () => {
     startTimeRef.current = Date.now();
     setRemaining(duration);
     setCompleted(false);
     setRunning(true);
+    await loadAndPlayAmbient(track);
   };
 
   const handleStop = () => {
     setRunning(false);
+    stopAmbient();
     if (startTimeRef.current > 0) {
       Alert.alert(
         "End Session?",
         "Do you want to end your prayer time early?",
         [
-          { text: "Keep Praying", style: "cancel", onPress: () => setRunning(true) },
+          { text: "Keep Praying", style: "cancel", onPress: () => {
+            setRunning(true);
+            loadAndPlayAmbient(track);
+          }},
           { text: "End", style: "destructive" },
         ]
       );
     }
   };
 
-  const progress = running || completed ? remaining / duration : 1;
+  // ── UI ───────────────────────────────────────────────────────────────────────
 
   return (
     <View style={{ flex: 1, backgroundColor: "#0A0A0A" }}>
       <StatusBar style="light" />
 
-      {/* Header */}
       <View style={{ paddingTop: 60, paddingHorizontal: 24, flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => { stopAmbient(); router.back(); }}>
           <Ionicons name="chevron-down" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={{ color: "#FFFFFF", fontFamily: "PlayfairDisplay-Bold", fontSize: 20 }}>
@@ -166,19 +253,13 @@ function TimerContent() {
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 32 }}>
         {/* Duration */}
-        <Text style={{ color: "#9A9A9A", fontFamily: "DMSans-Medium", fontSize: 11, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>
-          Duration
-        </Text>
+        <Text style={{ color: "#9A9A9A", fontFamily: "DMSans-Medium", fontSize: 11, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Duration</Text>
         <View style={{ flexDirection: "row", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
           {DURATIONS.map((d) => (
             <TouchableOpacity
               key={d.seconds}
               onPress={() => { if (!running) { setDuration(d.seconds); setRemaining(d.seconds); } }}
-              style={{
-                paddingHorizontal: 16, paddingVertical: 8, borderRadius: 100,
-                backgroundColor: duration === d.seconds ? "#F5B942" : "#1A1A1A",
-                opacity: running ? 0.5 : 1,
-              }}
+              style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 100, backgroundColor: duration === d.seconds ? "#F5B942" : "#1A1A1A", opacity: running ? 0.5 : 1 }}
             >
               <Text style={{ color: duration === d.seconds ? "#FFFFFF" : "#9A9A9A", fontFamily: "DMSans-Medium", fontSize: 14 }}>
                 {d.label}
@@ -188,12 +269,11 @@ function TimerContent() {
         </View>
 
         {/* Ambient sound */}
-        <Text style={{ color: "#9A9A9A", fontFamily: "DMSans-Medium", fontSize: 11, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>
-          Ambient Sound
-        </Text>
+        <Text style={{ color: "#9A9A9A", fontFamily: "DMSans-Medium", fontSize: 11, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Ambient Sound</Text>
         {TRACKS.map((t) => (
           <TouchableOpacity
-            key={t.id} onPress={() => { if (!running) setTrack(t.id); }}
+            key={t.id}
+            onPress={() => { if (!running) setTrack(t.id); }}
             style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#1A1A1A", borderRadius: 12, padding: 16, marginBottom: 8, opacity: running ? 0.5 : 1 }}
           >
             <Text style={{ color: "#FFFFFF", fontFamily: "DMSans-Regular", fontSize: 15 }}>{t.label}</Text>
@@ -202,12 +282,11 @@ function TimerContent() {
         ))}
 
         {/* Bell interval */}
-        <Text style={{ color: "#9A9A9A", fontFamily: "DMSans-Medium", fontSize: 11, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10, marginTop: 4 }}>
-          Bell Interval
-        </Text>
+        <Text style={{ color: "#9A9A9A", fontFamily: "DMSans-Medium", fontSize: 11, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10, marginTop: 4 }}>Bell Interval</Text>
         {BELL_OPTIONS.map((b) => (
           <TouchableOpacity
-            key={b.id} onPress={() => { if (!running) setBellInterval(b.id); }}
+            key={b.id}
+            onPress={() => { if (!running) setBellInterval(b.id); }}
             style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#1A1A1A", borderRadius: 12, padding: 16, marginBottom: 8, opacity: running ? 0.5 : 1 }}
           >
             <Text style={{ color: "#FFFFFF", fontFamily: "DMSans-Regular", fontSize: 15 }}>{b.label}</Text>
@@ -223,27 +302,21 @@ function TimerContent() {
             onPress={() => { setCompleted(false); setRemaining(duration); }}
             style={{ backgroundColor: "#1A1A1A", borderRadius: 100, paddingVertical: 18, alignItems: "center", borderWidth: 1, borderColor: "#2A2A2A" }}
           >
-            <Text style={{ color: "#9A9A9A", fontFamily: "DMSans-SemiBold", fontSize: 16 }}>
-              Pray Again
-            </Text>
+            <Text style={{ color: "#9A9A9A", fontFamily: "DMSans-SemiBold", fontSize: 16 }}>Pray Again</Text>
           </TouchableOpacity>
         ) : !running ? (
           <TouchableOpacity
             onPress={handleStart}
             style={{ backgroundColor: "#F5B942", borderRadius: 100, paddingVertical: 18, alignItems: "center" }}
           >
-            <Text style={{ color: "#FFFFFF", fontFamily: "DMSans-SemiBold", fontSize: 16 }}>
-              Start Prayer
-            </Text>
+            <Text style={{ color: "#FFFFFF", fontFamily: "DMSans-SemiBold", fontSize: 16 }}>Start Prayer</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
             onPress={handleStop}
             style={{ backgroundColor: "#1A1A1A", borderRadius: 100, paddingVertical: 18, alignItems: "center", borderWidth: 1, borderColor: "#2A2A2A" }}
           >
-            <Text style={{ color: "#9A9A9A", fontFamily: "DMSans-SemiBold", fontSize: 16 }}>
-              End Session
-            </Text>
+            <Text style={{ color: "#9A9A9A", fontFamily: "DMSans-SemiBold", fontSize: 16 }}>End Session</Text>
           </TouchableOpacity>
         )}
       </View>
