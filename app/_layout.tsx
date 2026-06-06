@@ -1,14 +1,17 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
+import * as Notifications from "expo-notifications";
 import { StatusBar } from "expo-status-bar";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
 import { initializePurchases, getSubscriptionStatus } from "@/lib/purchases";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { PaywallScreen } from "@/components/ui/PaywallScreen";
+import { registerPushToken } from "@/lib/notifications";
+import { useRouter as useRouterHook } from "expo-router";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -23,6 +26,32 @@ function AuthGuard() {
   const { setIsPremium, setIsLoading } = useSubscriptionStore();
   const segments = useSegments();
   const router = useRouter();
+  const notificationListener = useRef<Notifications.Subscription>();
+  const responseListener = useRef<Notifications.Subscription>();
+
+  useEffect(() => {
+    // Handle foreground notifications
+    notificationListener.current = Notifications.addNotificationReceivedListener(() => {
+      // Badge or in-app banner could go here
+    });
+
+    // Handle notification tap — deep link to notifications inbox
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const screen = response.notification.request.content.data?.screen as string | undefined;
+        if (screen) {
+          router.push(screen as any);
+        } else {
+          router.push("/notifications");
+        }
+      }
+    );
+
+    return () => {
+      notificationListener.current?.remove();
+      responseListener.current?.remove();
+    };
+  }, []);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -30,10 +59,12 @@ function AuthGuard() {
         setSession(session);
         if (session?.user) {
           await fetchProfile(session.user.id);
-          // Initialize RevenueCat with the authenticated user's ID
+          // Initialize RevenueCat
           await initializePurchases(session.user.id);
           const premium = await getSubscriptionStatus();
           setIsPremium(premium);
+          // Register push token — saves to Supabase so admin panel can send notifications
+          await registerPushToken(session.user.id);
           setIsLoading(false);
         } else {
           setIsLoading(false);
@@ -48,6 +79,7 @@ function AuthGuard() {
         await initializePurchases(session.user.id);
         const premium = await getSubscriptionStatus();
         setIsPremium(premium);
+        await registerPushToken(session.user.id);
       }
       setIsLoading(false);
     });
@@ -87,7 +119,6 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <StatusBar style="dark" />
       <AuthGuard />
-      {/* Global paywall modal — accessible from anywhere in the app */}
       <PaywallScreen />
     </QueryClientProvider>
   );
