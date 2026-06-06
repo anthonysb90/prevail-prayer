@@ -1,4 +1,5 @@
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { PremiumGate } from "@/components/ui/PremiumGate";
 import { VERSE_TOPICS } from "@/constants/verses";
@@ -11,13 +12,22 @@ const TOPIC_ICONS: Record<ScriptureTopic, string> = {
   Salvation: "star-outline", Hope: "sunny-outline",
 };
 
-const TOPIC_COLORS: Record<ScriptureTopic, string> = {
-  Prayer: "#E3F2FD", Faith: "#FFF8E1", Healing: "#FCE4EC", Peace: "#E8F5E9",
-  Guidance: "#E0F7FA", Trust: "#FCE4EC", Praise: "#FFF8E1", Warfare: "#EDE7F6",
-  Salvation: "#FBE9E7", Hope: "#FFF9C4",
+const TOPIC_COLORS: Record<ScriptureTopic, { bg: string; icon: string }> = {
+  Prayer:   { bg: "#E3F2FD", icon: "#2196F3" },
+  Faith:    { bg: "#FFF8E1", icon: "#FFC107" },
+  Healing:  { bg: "#FCE4EC", icon: "#E91E63" },
+  Peace:    { bg: "#E8F5E9", icon: "#4CAF50" },
+  Guidance: { bg: "#E0F7FA", icon: "#00BCD4" },
+  Trust:    { bg: "#FCE4EC", icon: "#E91E63" },
+  Praise:   { bg: "#FFF8E1", icon: "#FF9800" },
+  Warfare:  { bg: "#EDE7F6", icon: "#673AB7" },
+  Salvation:{ bg: "#FBE9E7", icon: "#FF5722" },
+  Hope:     { bg: "#FFF9C4", icon: "#F9A825" },
 };
 
 function LibraryContent() {
+  const router = useRouter();
+
   return (
     <View className="flex-1 bg-cream-100">
       <View className="px-6 pt-16 pb-6">
@@ -25,23 +35,53 @@ function LibraryContent() {
           Scripture Library
         </Text>
         <Text className="text-charcoal-400 text-sm mt-1" style={{ fontFamily: "DMSans-Regular" }}>
-          KJV — organized by topic
+          KJV — tap a topic to read
         </Text>
       </View>
+
       <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 32 }}>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-          {VERSE_TOPICS.map((topic) => (
-            <TouchableOpacity
-              key={topic}
-              style={{ width: "47%", backgroundColor: TOPIC_COLORS[topic], borderRadius: 16, padding: 20 }}
-              activeOpacity={0.8}
-            >
-              <Ionicons name={TOPIC_ICONS[topic] as any} size={28} color="#1A1A1A" />
-              <Text style={{ fontFamily: "PlayfairDisplay-SemiBold", fontSize: 18, color: "#1A1A1A", marginTop: 12 }}>
-                {topic}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {VERSE_TOPICS.map((topic) => {
+            const colors = TOPIC_COLORS[topic];
+            return (
+              <TouchableOpacity
+                key={topic}
+                onPress={() => router.push(`/library/${encodeURIComponent(topic)}`)}
+                style={{
+                  width: "47%",
+                  backgroundColor: colors.bg,
+                  borderRadius: 18,
+                  padding: 20,
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.04,
+                  shadowRadius: 3,
+                  elevation: 1,
+                }}
+                activeOpacity={0.8}
+              >
+                <View
+                  style={{
+                    width: 44, height: 44, borderRadius: 13,
+                    backgroundColor: "rgba(255,255,255,0.6)",
+                    alignItems: "center", justifyContent: "center",
+                    marginBottom: 14,
+                  }}
+                >
+                  <Ionicons name={TOPIC_ICONS[topic] as any} size={24} color={colors.icon} />
+                </View>
+                <Text style={{ fontFamily: "PlayfairDisplay-Bold", fontSize: 18, color: "#1A1A1A" }}>
+                  {topic}
+                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6 }}>
+                  <Text style={{ fontFamily: "DMSans-Regular", fontSize: 12, color: "#4A4A4A" }}>
+                    View verses
+                  </Text>
+                  <Ionicons name="arrow-forward" size={12} color="#4A4A4A" style={{ marginLeft: 4 }} />
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </ScrollView>
     </View>
@@ -52,7 +92,7 @@ export default function LibraryScreen() {
   return (
     <PremiumGate
       feature="Scripture Library"
-      description="60+ KJV verses organized across 10 topics including Prayer, Healing, Warfare, Peace, and more. Save your favorites."
+      description="60+ KJV verses organized across 10 topics. Save your favorites and let Scripture fuel your prayer life."
       icon="library-outline"
     >
       <LibraryContent />
