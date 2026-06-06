@@ -1,34 +1,33 @@
 import { useState } from "react";
 import {
   View, Text, TextInput, TouchableOpacity,
-  ScrollView, KeyboardAvoidingView, Platform, Alert,
+  ScrollView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { supabase } from "@/lib/supabase";
-import { useAuthStore } from "@/stores/authStore";
-import { DEFAULT_CATEGORIES } from "@/constants/categories";
+import { useCategories } from "@/hooks/useCategories";
+import { useCreatePrayer } from "@/hooks/usePrayers";
 import { PrayerStatus } from "@/types";
 
 const STATUS_OPTIONS: { value: PrayerStatus; label: string }[] = [
-  { value: "active",   label: "Active" },
-  { value: "ongoing",  label: "Ongoing" },
+  { value: "active", label: "Active" },
+  { value: "ongoing", label: "Ongoing" },
 ];
 
 export default function NewPrayerScreen() {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { data: categories = [], isLoading: categoriesLoading } = useCategories();
+  const createPrayer = useCreatePrayer();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [isUrgent, setIsUrgent] = useState(false);
   const [status, setStatus] = useState<PrayerStatus>("active");
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
 
-  const toggleCategory = (name: string) => {
-    setSelectedCategories((prev) =>
-      prev.includes(name) ? prev.filter((c) => c !== name) : [...prev, name]
+  const toggleCategory = (id: string) => {
+    setSelectedCategoryIds((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
     );
   };
 
@@ -37,24 +36,19 @@ export default function NewPrayerScreen() {
       Alert.alert("Please add a title for your prayer request.");
       return;
     }
-    if (!user) return;
 
-    setLoading(true);
-
-    const { error } = await supabase.from("prayer_requests").insert({
-      user_id: user.id,
-      title: title.trim(),
-      description: description.trim() || null,
-      status,
-      is_urgent: isUrgent,
-    });
-
-    if (error) {
-      Alert.alert("Error saving prayer request", error.message);
-    } else {
+    try {
+      await createPrayer.mutateAsync({
+        title,
+        description,
+        status,
+        is_urgent: isUrgent,
+        categoryIds: selectedCategoryIds,
+      });
       router.back();
+    } catch (e: any) {
+      Alert.alert("Error saving prayer request", e.message);
     }
-    setLoading(false);
   };
 
   return (
@@ -67,13 +61,26 @@ export default function NewPrayerScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="close" size={24} color="#4A4A4A" />
         </TouchableOpacity>
-        <Text style={{ fontFamily: "PlayfairDisplay-Bold", fontSize: 20 }} className="text-charcoal-900">
+        <Text
+          style={{ fontFamily: "PlayfairDisplay-Bold", fontSize: 20 }}
+          className="text-charcoal-900"
+        >
           New Prayer Request
         </Text>
-        <TouchableOpacity onPress={handleSave} disabled={loading}>
-          <Text className="text-amber-500" style={{ fontFamily: "DMSans-SemiBold", fontSize: 16 }}>
-            {loading ? "Saving..." : "Save"}
-          </Text>
+        <TouchableOpacity
+          onPress={handleSave}
+          disabled={createPrayer.isPending}
+        >
+          {createPrayer.isPending ? (
+            <ActivityIndicator size="small" color="#F5B942" />
+          ) : (
+            <Text
+              className="text-amber-500"
+              style={{ fontFamily: "DMSans-SemiBold", fontSize: 16 }}
+            >
+              Save
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -92,7 +99,12 @@ export default function NewPrayerScreen() {
         {/* Description */}
         <TextInput
           className="bg-white border border-cream-200 rounded-xl px-4 py-4 text-charcoal-900 mb-4"
-          style={{ fontFamily: "DMSans-Regular", fontSize: 15, minHeight: 100, textAlignVertical: "top" }}
+          style={{
+            fontFamily: "DMSans-Regular",
+            fontSize: 15,
+            minHeight: 100,
+            textAlignVertical: "top",
+          }}
           placeholder="Add details, Scripture, or context (optional)..."
           placeholderTextColor="#8A8A8A"
           value={description}
@@ -114,7 +126,9 @@ export default function NewPrayerScreen() {
             color={isUrgent ? "#E53E3E" : "#8A8A8A"}
           />
           <Text
-            className={`ml-3 text-base ${isUrgent ? "text-red-600" : "text-charcoal-600"}`}
+            className={`ml-3 text-base ${
+              isUrgent ? "text-red-600" : "text-charcoal-600"
+            }`}
             style={{ fontFamily: "DMSans-Medium" }}
           >
             Mark as Urgent
@@ -122,7 +136,10 @@ export default function NewPrayerScreen() {
         </TouchableOpacity>
 
         {/* Status */}
-        <Text className="text-charcoal-600 text-sm mb-2" style={{ fontFamily: "DMSans-Medium" }}>
+        <Text
+          className="text-charcoal-600 text-sm mb-2"
+          style={{ fontFamily: "DMSans-Medium" }}
+        >
           Request Type
         </Text>
         <View className="flex-row gap-3 mb-6">
@@ -137,7 +154,9 @@ export default function NewPrayerScreen() {
               onPress={() => setStatus(opt.value)}
             >
               <Text
-                className={status === opt.value ? "text-white" : "text-charcoal-600"}
+                className={
+                  status === opt.value ? "text-white" : "text-charcoal-600"
+                }
                 style={{ fontFamily: "DMSans-Medium", fontSize: 14 }}
               >
                 {opt.label}
@@ -147,38 +166,45 @@ export default function NewPrayerScreen() {
         </View>
 
         {/* Categories */}
-        <Text className="text-charcoal-600 text-sm mb-3" style={{ fontFamily: "DMSans-Medium" }}>
+        <Text
+          className="text-charcoal-600 text-sm mb-3"
+          style={{ fontFamily: "DMSans-Medium" }}
+        >
           Categories
         </Text>
-        <View className="flex-row flex-wrap gap-2 mb-8">
-          {DEFAULT_CATEGORIES.map((cat) => {
-            const isSelected = selectedCategories.includes(cat.name);
-            return (
-              <TouchableOpacity
-                key={cat.name}
-                style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 7,
-                  borderRadius: 100,
-                  backgroundColor: isSelected ? cat.color_bg : "#FFFFFF",
-                  borderWidth: 1.5,
-                  borderColor: isSelected ? cat.color_border : "#EDE5D8",
-                }}
-                onPress={() => toggleCategory(cat.name)}
-              >
-                <Text
+        {categoriesLoading ? (
+          <ActivityIndicator color="#F5B942" style={{ marginBottom: 16 }} />
+        ) : (
+          <View className="flex-row flex-wrap gap-2 mb-10">
+            {categories.map((cat) => {
+              const isSelected = selectedCategoryIds.includes(cat.id);
+              return (
+                <TouchableOpacity
+                  key={cat.id}
                   style={{
-                    fontFamily: "DMSans-Medium",
-                    fontSize: 13,
-                    color: isSelected ? cat.color_border : "#4A4A4A",
+                    paddingHorizontal: 14,
+                    paddingVertical: 7,
+                    borderRadius: 100,
+                    backgroundColor: isSelected ? cat.color_bg : "#FFFFFF",
+                    borderWidth: 1.5,
+                    borderColor: isSelected ? cat.color_border : "#EDE5D8",
                   }}
+                  onPress={() => toggleCategory(cat.id)}
                 >
-                  {cat.name}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+                  <Text
+                    style={{
+                      fontFamily: "DMSans-Medium",
+                      fontSize: 13,
+                      color: isSelected ? cat.color_border : "#4A4A4A",
+                    }}
+                  >
+                    {cat.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
