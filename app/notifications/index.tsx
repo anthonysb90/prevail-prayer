@@ -1,15 +1,16 @@
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { format } from "date-fns";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
 import { AnnouncementType } from "@/types";
+import { Theme } from "@/constants/theme";
+import { Icon } from "@/components/ui/Icon";
 
 const TYPE_CONFIG: Record<AnnouncementType, { color: string; bg: string; icon: string; label: string }> = {
-  info:      { color: "#2196F3", bg: "#E3F2FD", icon: "information-circle-outline", label: "Info" },
-  prayer:    { color: "#9C27B0", bg: "#F3E5F5", icon: "hand-right-outline",          label: "Prayer Need" },
-  emergency: { color: "#E53E3E", bg: "#FFEBEE", icon: "alert-circle-outline",        label: "Emergency" },
-  update:    { color: "#4CAF50", bg: "#E8F5E9", icon: "checkmark-circle-outline",    label: "Update" },
+  info:      { color: Theme.primary, bg: Theme.primarySoft, icon: "sparkle", label: "Info" },
+  prayer:    { color: "#7A5BD0",     bg: "#EEEAFB",         icon: "pray",    label: "Prayer Need" },
+  emergency: { color: Theme.urgent,  bg: "#FBEAEE",         icon: "flame",   label: "Emergency" },
+  update:    { color: Theme.success, bg: "#ECF8F2",         icon: "check",   label: "Update" },
 };
 
 export default function NotificationsScreen() {
@@ -17,60 +18,37 @@ export default function NotificationsScreen() {
   const { data: announcements = [], isLoading, refetch } = useAnnouncements();
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#F5F0E8" }}>
-      {/* Header */}
-      <View style={{ paddingTop: 64, paddingHorizontal: 24, paddingBottom: 16, flexDirection: "row", alignItems: "center" }}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
-          <Ionicons name="arrow-back" size={22} color="#4A4A4A" />
-        </TouchableOpacity>
-        <Text style={{ fontFamily: "PlayfairDisplay-Bold", fontSize: 26, color: "#1A1A1A" }}>
-          Notifications
-        </Text>
+    <View style={{ flex: 1, backgroundColor: Theme.bg }}>
+      <View style={{ paddingTop: 60, paddingHorizontal: 22, paddingBottom: 16, flexDirection: "row", alignItems: "center", gap: 14 }}>
+        <TouchableOpacity onPress={() => router.back()}><Icon name="left" size={22} color={Theme.text} /></TouchableOpacity>
+        <Text style={{ fontFamily: Theme.font.serif, fontSize: 26, color: Theme.text }}>Notifications</Text>
       </View>
 
       {announcements.length === 0 && !isLoading ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }}>
-          <Ionicons name="notifications-outline" size={48} color="#EDE5D8" />
-          <Text style={{ fontFamily: "DMSans-Regular", fontSize: 15, color: "#8A8A8A", textAlign: "center", marginTop: 16 }}>
-            No announcements yet.
-          </Text>
+          <Icon name="bell" size={44} color={Theme.textFaint} />
+          <Text style={{ fontFamily: Theme.font.sans, fontSize: 15, color: Theme.textMuted, textAlign: "center", marginTop: 14 }}>No announcements yet.</Text>
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 32 }}
-          refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor="#F5B942" />}
+          contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 32 }}
+          refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={Theme.primary} />}
         >
-          {announcements.map((item) => {
-            const cfg = TYPE_CONFIG[item.type] ?? TYPE_CONFIG.info;
+          {announcements.map((item: any) => {
+            const cfg = TYPE_CONFIG[(item.type as AnnouncementType)] ?? TYPE_CONFIG.info;
             return (
-              <View
-                key={item.id}
-                style={{
-                  backgroundColor: "#FFFFFF",
-                  borderRadius: 16,
-                  padding: 18,
-                  marginBottom: 10,
-                  borderLeftWidth: 3,
-                  borderLeftColor: cfg.color,
-                }}
-              >
-                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-                  <View style={{ backgroundColor: cfg.bg, borderRadius: 100, paddingHorizontal: 10, paddingVertical: 4, flexDirection: "row", alignItems: "center" }}>
-                    <Ionicons name={cfg.icon as any} size={13} color={cfg.color} />
-                    <Text style={{ fontFamily: "DMSans-SemiBold", fontSize: 11, color: cfg.color, marginLeft: 4 }}>
-                      {cfg.label}
-                    </Text>
+              <View key={item.id} style={{ backgroundColor: Theme.card, borderRadius: Theme.radius.card, borderWidth: 1, borderColor: Theme.cardBorder, padding: 18, marginBottom: 11, ...Theme.shadow }}>
+                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+                  <View style={{ backgroundColor: cfg.bg, borderRadius: Theme.radius.pill, paddingHorizontal: 10, paddingVertical: 4, flexDirection: "row", alignItems: "center", gap: 5 }}>
+                    <Icon name={cfg.icon} size={13} color={cfg.color} />
+                    <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 12, color: cfg.color }}>{cfg.label}</Text>
                   </View>
-                  <Text style={{ fontFamily: "DMSans-Regular", fontSize: 11, color: "#8A8A8A", marginLeft: "auto" }}>
+                  <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 12, color: Theme.textFaint, marginLeft: "auto" }}>
                     {item.sent_at ? format(new Date(item.sent_at), "MMM d, yyyy") : ""}
                   </Text>
                 </View>
-                <Text style={{ fontFamily: "DMSans-SemiBold", fontSize: 16, color: "#1A1A1A", marginBottom: 6 }}>
-                  {item.title}
-                </Text>
-                <Text style={{ fontFamily: "DMSans-Regular", fontSize: 14, color: "#4A4A4A", lineHeight: 21 }}>
-                  {item.body}
-                </Text>
+                <Text style={{ fontFamily: Theme.font.serif, fontSize: 18, color: Theme.text, marginBottom: 6 }}>{item.title}</Text>
+                <Text style={{ fontFamily: Theme.font.sans, fontSize: 14, color: Theme.textMuted, lineHeight: 21 }}>{item.body}</Text>
               </View>
             );
           })}

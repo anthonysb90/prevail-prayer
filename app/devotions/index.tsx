@@ -1,86 +1,48 @@
-import {
-  View, Text, ScrollView, TouchableOpacity,
-  Image, ActivityIndicator, RefreshControl,
-} from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { format } from "date-fns";
 import { useDevotions } from "@/hooks/useDevotions";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { Devotion } from "@/types";
+import { Theme } from "@/constants/theme";
+import { Icon } from "@/components/ui/Icon";
 
 function DevotionRow({ devotion }: { devotion: Devotion }) {
   const router = useRouter();
   const { isPremium, showPaywall } = useSubscriptionStore();
-
-  const handlePress = () => {
-    if (!isPremium) { showPaywall(); return; }
-    router.push(`/devotions/${devotion.id}`);
-  };
+  const onPress = () => { if (!isPremium) return showPaywall(); router.push(`/devotions/${devotion.id}`); };
 
   return (
     <TouchableOpacity
-      onPress={handlePress}
-      activeOpacity={0.8}
+      onPress={onPress}
+      activeOpacity={0.85}
       style={{
-        backgroundColor: "#FFFFFF",
-        borderRadius: 18,
-        marginBottom: 12,
-        overflow: "hidden",
-        flexDirection: "row",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 1,
+        backgroundColor: Theme.card, borderRadius: Theme.radius.card, borderWidth: 1, borderColor: Theme.cardBorder,
+        marginBottom: 12, overflow: "hidden", flexDirection: "row", ...Theme.shadow,
       }}
     >
-      {/* Thumbnail */}
       {devotion.image_url ? (
-        <Image
-          source={{ uri: devotion.image_url }}
-          style={{ width: 90, height: 90 }}
-          resizeMode="cover"
-        />
+        <Image source={{ uri: devotion.image_url }} style={{ width: 92, height: 92 }} resizeMode="cover" />
       ) : (
-        <View
-          style={{
-            width: 90, height: 90,
-            backgroundColor: "#2A2A2A",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Ionicons name="book-outline" size={28} color="#F5B942" />
+        <View style={{ width: 92, height: 92, backgroundColor: "#C7C4E2", alignItems: "center", justifyContent: "center" }}>
+          <Icon name="cross" size={26} color="rgba(255,255,255,0.9)" />
         </View>
       )}
-
-      {/* Content */}
       <View style={{ flex: 1, padding: 14, justifyContent: "center" }}>
         {devotion.published_at && (
-          <Text style={{ fontFamily: "DMSans-Regular", fontSize: 11, color: "#8A8A8A", marginBottom: 4 }}>
+          <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 12, color: Theme.textFaint, marginBottom: 4 }}>
             {format(new Date(devotion.published_at), "MMMM d, yyyy")}
           </Text>
         )}
-        <Text
-          style={{ fontFamily: "PlayfairDisplay-SemiBold", fontSize: 16, color: "#1A1A1A", lineHeight: 22, marginBottom: 4 }}
-          numberOfLines={2}
-        >
+        <Text style={{ fontFamily: Theme.font.serif, fontSize: 17, color: Theme.text, lineHeight: 23, marginBottom: 4 }} numberOfLines={2}>
           {devotion.title}
         </Text>
         {devotion.scripture_reference && (
-          <Text style={{ fontFamily: "DMSans-Regular", fontSize: 12, color: "#F5B942", fontStyle: "italic" }}>
-            {devotion.scripture_reference}
-          </Text>
+          <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 12, color: Theme.primary }}>{devotion.scripture_reference}</Text>
         )}
       </View>
-
       <View style={{ justifyContent: "center", paddingRight: 14 }}>
-        <Ionicons
-          name={isPremium ? "chevron-forward" : "lock-closed-outline"}
-          size={18}
-          color="#8A8A8A"
-        />
+        <Icon name={isPremium ? "right" : "lock"} size={18} color={Theme.textFaint} />
       </View>
     </TouchableOpacity>
   );
@@ -91,21 +53,13 @@ export default function DevotionsArchiveScreen() {
   const { data: devotions = [], isLoading, refetch } = useDevotions();
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#F5F0E8" }}>
-      {/* Header */}
-      <View style={{
-        paddingTop: 64, paddingHorizontal: 24, paddingBottom: 16,
-        flexDirection: "row", alignItems: "center",
-      }}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
-          <Ionicons name="arrow-back" size={22} color="#4A4A4A" />
-        </TouchableOpacity>
+    <View style={{ flex: 1, backgroundColor: Theme.bg }}>
+      <View style={{ paddingTop: 60, paddingHorizontal: 22, paddingBottom: 16, flexDirection: "row", alignItems: "center", gap: 14 }}>
+        <TouchableOpacity onPress={() => router.back()}><Icon name="left" size={22} color={Theme.text} /></TouchableOpacity>
         <View>
-          <Text style={{ fontFamily: "PlayfairDisplay-Bold", fontSize: 26, color: "#1A1A1A" }}>
-            Devotions
-          </Text>
+          <Text style={{ fontFamily: Theme.font.serif, fontSize: 26, color: Theme.text }}>Devotions</Text>
           {devotions.length > 0 && (
-            <Text style={{ fontFamily: "DMSans-Regular", fontSize: 12, color: "#8A8A8A", marginTop: 2 }}>
+            <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 12, color: Theme.textFaint, marginTop: 2 }}>
               {devotions.length} {devotions.length === 1 ? "devotion" : "devotions"}
             </Text>
           )}
@@ -113,26 +67,20 @@ export default function DevotionsArchiveScreen() {
       </View>
 
       {isLoading ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator color="#F5B942" />
-        </View>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color={Theme.primary} /></View>
       ) : devotions.length === 0 ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }}>
-          <Ionicons name="book-outline" size={48} color="#EDE5D8" />
-          <Text style={{ fontFamily: "DMSans-Regular", fontSize: 15, color: "#8A8A8A", textAlign: "center", marginTop: 16, lineHeight: 22 }}>
+          <Icon name="book" size={44} color={Theme.textFaint} />
+          <Text style={{ fontFamily: Theme.font.sans, fontSize: 15, color: Theme.textMuted, textAlign: "center", marginTop: 14, lineHeight: 22 }}>
             No devotions published yet.{"\n"}Check back soon.
           </Text>
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}
-          refreshControl={
-            <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor="#F5B942" />
-          }
+          contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 40 }}
+          refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={Theme.primary} />}
         >
-          {devotions.map((d) => (
-            <DevotionRow key={d.id} devotion={d} />
-          ))}
+          {devotions.map((d: Devotion) => <DevotionRow key={d.id} devotion={d} />)}
         </ScrollView>
       )}
     </View>
