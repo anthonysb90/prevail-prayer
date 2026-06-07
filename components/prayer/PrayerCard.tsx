@@ -1,79 +1,64 @@
 import { View, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import { PrayerRequest } from "@/types";
-import { CategoryChip } from "./CategoryChip";
+import { Theme } from "@/constants/theme";
+import { Icon } from "@/components/ui/Icon";
+import { Tag } from "@/components/ui/atoms";
 
 interface PrayerCardProps {
   prayer: PrayerRequest;
+  compact?: boolean;
 }
 
-export function PrayerCard({ prayer }: PrayerCardProps) {
+export function PrayerCard({ prayer, compact }: PrayerCardProps) {
   const router = useRouter();
+  const cats = prayer.categories ?? [];
 
   return (
     <TouchableOpacity
       onPress={() => router.push(`/prayer/${prayer.id}`)}
+      activeOpacity={0.85}
       style={{
-        backgroundColor: "#FFFFFF",
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 10,
-        borderLeftWidth: prayer.is_urgent ? 3 : 0,
-        borderLeftColor: "#E53E3E",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.04,
-        shadowRadius: 4,
-        elevation: 1,
+        backgroundColor: Theme.card,
+        borderRadius: Theme.radius.card,
+        borderWidth: 1,
+        borderColor: Theme.cardBorder,
+        padding: compact ? 15 : 17,
+        marginBottom: 11,
+        ...Theme.shadow,
       }}
-      activeOpacity={0.8}
     >
-      {prayer.is_urgent && (
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            marginBottom: 6,
-          }}
-        >
-          <Ionicons name="alert-circle" size={13} color="#E53E3E" />
+      {/* Title row */}
+      <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
+        <View style={{ flexDirection: "row", alignItems: "center", flex: 1, gap: 7 }}>
+          {prayer.is_urgent && <Icon name="flame" size={16} color={Theme.urgent} />}
           <Text
             style={{
-              fontFamily: "DMSans-SemiBold",
-              fontSize: 10,
-              color: "#E53E3E",
-              marginLeft: 4,
-              textTransform: "uppercase",
-              letterSpacing: 0.5,
+              fontFamily: Theme.font.serif,
+              fontSize: compact ? 16 : 17,
+              color: Theme.text,
+              flex: 1,
             }}
+            numberOfLines={1}
           >
-            Urgent
+            {prayer.title}
           </Text>
         </View>
-      )}
+        <View style={{ marginTop: 3, marginLeft: 8 }}>
+          <Icon name="right" size={17} color={Theme.textFaint} />
+        </View>
+      </View>
 
-      <Text
-        style={{
-          fontFamily: "DMSans-SemiBold",
-          fontSize: 15,
-          color: "#1A1A1A",
-          marginBottom: 4,
-        }}
-        numberOfLines={1}
-      >
-        {prayer.title}
-      </Text>
-
-      {prayer.description ? (
+      {/* Description */}
+      {prayer.description && !compact ? (
         <Text
           style={{
-            fontFamily: "DMSans-Regular",
-            fontSize: 13,
-            color: "#4A4A4A",
-            marginBottom: 10,
-            lineHeight: 18,
+            fontFamily: Theme.font.sans,
+            fontSize: 14,
+            color: Theme.textMuted,
+            lineHeight: 20,
+            marginTop: 6,
           }}
           numberOfLines={2}
         >
@@ -81,29 +66,30 @@ export function PrayerCard({ prayer }: PrayerCardProps) {
         </Text>
       ) : null}
 
-      {prayer.categories && prayer.categories.length > 0 && (
-        <View
-          style={{
-            flexDirection: "row",
-            flexWrap: "wrap",
-            marginBottom: 8,
-          }}
-        >
-          {prayer.categories.map((cat) => (
-            <CategoryChip key={cat.id} category={cat} />
-          ))}
-        </View>
-      )}
-
-      <Text
+      {/* Footer: tags + status meta */}
+      <View
         style={{
-          fontFamily: "DMSans-Regular",
-          fontSize: 11,
-          color: "#8A8A8A",
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginTop: 12,
         }}
       >
-        {formatDistanceToNow(new Date(prayer.created_at), { addSuffix: true })}
-      </Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, flex: 1 }}>
+          {cats.slice(0, 2).map((cat) => (
+            <Tag key={cat.id} category={cat} small />
+          ))}
+        </View>
+
+        {prayer.status === "answered" && prayer.answered_at ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginLeft: 8 }}>
+            <Icon name="check" size={13} color={Theme.success} />
+            <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 12, color: Theme.success }}>
+              {format(new Date(prayer.answered_at), "MMM d")}
+            </Text>
+          </View>
+        ) : null}
+      </View>
     </TouchableOpacity>
   );
 }

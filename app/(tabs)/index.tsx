@@ -1,10 +1,6 @@
-import {
-  View, Text, ScrollView, TouchableOpacity,
-  RefreshControl, Image,
-} from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { useState, useCallback } from "react";
-import { Ionicons } from "@expo/vector-icons";
 import { format } from "date-fns";
 import { useAuthStore } from "@/stores/authStore";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
@@ -14,187 +10,100 @@ import {
 } from "@/hooks/usePrayers";
 import { useLatestDevotion, useDevotions } from "@/hooks/useDevotions";
 import { PrayerCard } from "@/components/prayer/PrayerCard";
+import { PrayerRequest } from "@/types";
 import { FEATURED_VERSES } from "@/constants/verses";
+import { Theme } from "@/constants/theme";
+import { Icon } from "@/components/ui/Icon";
+import { VerseBlock, SectionHeader, RoundButton } from "@/components/ui/atoms";
 
 function getRandomVerse() {
   return FEATURED_VERSES[Math.floor(Math.random() * FEATURED_VERSES.length)];
 }
-
 function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
   return "Good evening";
 }
 
-// ─── Devotion Card ────────────────────────────────────────────────────────────
-
-function DevotionCard() {
+// ─── Devotion hero ────────────────────────────────────────────────────────────
+function DevotionHero() {
   const router = useRouter();
   const { data: devotion, isLoading } = useLatestDevotion();
   const { isPremium, showPaywall } = useSubscriptionStore();
 
   if (isLoading || !devotion) return null;
 
-  const handlePress = () => {
-    if (!isPremium) {
-      showPaywall();
-      return;
-    }
+  const onPress = () => {
+    if (!isPremium) return showPaywall();
     router.push(`/devotions/${devotion.id}`);
   };
 
   return (
-    <TouchableOpacity
-      onPress={handlePress}
-      activeOpacity={0.88}
-      style={{ marginHorizontal: 24, marginBottom: 24 }}
-    >
+    <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={{ marginHorizontal: 22, marginBottom: 16 }}>
       <View
         style={{
-          borderRadius: 20,
+          borderRadius: Theme.radius.card,
           overflow: "hidden",
-          backgroundColor: "#1A1A1A",
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.12,
-          shadowRadius: 12,
-          elevation: 4,
+          backgroundColor: Theme.card,
+          borderWidth: 1,
+          borderColor: Theme.cardBorder,
+          ...Theme.shadow,
         }}
       >
-        {/* Hero image */}
-        {devotion.image_url ? (
-          <Image
-            source={{ uri: devotion.image_url }}
-            style={{ width: "100%", height: 160 }}
-            resizeMode="cover"
-          />
-        ) : (
+        {/* Image / colored band */}
+        <View style={{ height: 132, backgroundColor: "#C7C4E2" }}>
+          {devotion.image_url ? (
+            <Image source={{ uri: devotion.image_url }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+          ) : (
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+              <Icon name="cross" size={34} color="rgba(255,255,255,0.85)" />
+            </View>
+          )}
+          {/* Badge */}
           <View
             style={{
-              height: 100,
-              backgroundColor: "#2A2A2A",
-              alignItems: "center",
-              justifyContent: "center",
+              position: "absolute", top: 14, left: 14,
+              flexDirection: "row", alignItems: "center", gap: 5,
+              backgroundColor: "rgba(20,18,32,0.55)",
+              borderRadius: Theme.radius.pill, paddingHorizontal: 11, paddingVertical: 5,
             }}
           >
-            <Ionicons name="book-outline" size={36} color="#F5B942" />
+            <Icon name="sparkle" size={13} color="#FFFFFF" />
+            <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 12, color: "#FFFFFF" }}>
+              Today's Devotion
+            </Text>
           </View>
-        )}
-
-        {/* Overlay gradient feel */}
-        <View style={{ padding: 18 }}>
-          {/* Label row */}
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: 10,
-            }}
-          >
+          {!isPremium && (
             <View
               style={{
-                flexDirection: "row",
-                alignItems: "center",
-                backgroundColor: "#F5B942",
-                borderRadius: 100,
-                paddingHorizontal: 10,
-                paddingVertical: 4,
+                position: "absolute", top: 14, right: 14,
+                flexDirection: "row", alignItems: "center", gap: 4,
+                backgroundColor: "rgba(20,18,32,0.55)",
+                borderRadius: Theme.radius.pill, paddingHorizontal: 10, paddingVertical: 5,
               }}
             >
-              <Ionicons name="sunny-outline" size={12} color="#FFFFFF" />
-              <Text
-                style={{
-                  fontFamily: "DMSans-SemiBold",
-                  fontSize: 11,
-                  color: "#FFFFFF",
-                  marginLeft: 5,
-                  textTransform: "uppercase",
-                  letterSpacing: 0.5,
-                }}
-              >
-                Today's Devotion
-              </Text>
+              <Icon name="lock" size={12} color="#FFFFFF" />
+              <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 12, color: "#FFFFFF" }}>Premium</Text>
             </View>
+          )}
+        </View>
 
-            {!isPremium && (
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  backgroundColor: "rgba(255,255,255,0.1)",
-                  borderRadius: 100,
-                  paddingHorizontal: 10,
-                  paddingVertical: 4,
-                }}
-              >
-                <Ionicons name="lock-closed" size={11} color="#9A9A9A" />
-                <Text
-                  style={{
-                    fontFamily: "DMSans-Medium",
-                    fontSize: 11,
-                    color: "#9A9A9A",
-                    marginLeft: 4,
-                  }}
-                >
-                  Premium
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {/* Title */}
-          <Text
-            style={{
-              fontFamily: "PlayfairDisplay-Bold",
-              fontSize: 20,
-              color: "#FFFFFF",
-              lineHeight: 27,
-              marginBottom: 8,
-            }}
-            numberOfLines={2}
-          >
-            {devotion.title}
-          </Text>
-
-          {/* Scripture reference */}
+        {/* Body */}
+        <View style={{ padding: 18 }}>
           {devotion.scripture_reference && (
-            <Text
-              style={{
-                fontFamily: "DMSans-Regular",
-                fontSize: 13,
-                color: "#9A9A9A",
-                marginBottom: 14,
-                fontStyle: "italic",
-              }}
-            >
+            <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 13, color: Theme.primary, marginBottom: 6 }}>
               {devotion.scripture_reference}
             </Text>
           )}
-
-          {/* CTA */}
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <Text
-              style={{
-                fontFamily: "DMSans-SemiBold",
-                fontSize: 14,
-                color: isPremium ? "#F5B942" : "#9A9A9A",
-              }}
-            >
-              {isPremium ? "Read now" : "Subscribe to read"}
+          <Text style={{ fontFamily: Theme.font.serif, fontSize: 21, color: Theme.text, lineHeight: 27 }} numberOfLines={2}>
+            {devotion.title}
+          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 12 }}>
+            <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 14, color: isPremium ? Theme.primary : Theme.textMuted }}>
+              {isPremium ? "Read · 5 min" : "Subscribe to read"}
             </Text>
-            <Ionicons
-              name={isPremium ? "arrow-forward-circle" : "lock-closed-outline"}
-              size={20}
-              color={isPremium ? "#F5B942" : "#9A9A9A"}
-            />
+            <Icon name={isPremium ? "right" : "lock"} size={15} color={isPremium ? Theme.primary : Theme.textMuted} />
           </View>
         </View>
       </View>
@@ -202,8 +111,7 @@ function DevotionCard() {
   );
 }
 
-// ─── Home Screen ─────────────────────────────────────────────────────────────
-
+// ─── Home ─────────────────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const router = useRouter();
   const { profile } = useAuthStore();
@@ -217,241 +125,112 @@ export default function HomeScreen() {
   const { data: devotions = [] } = useDevotions();
 
   const [refreshing, setRefreshing] = useState(false);
-
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     setVerse(getRandomVerse());
-    await Promise.all([
-      refetchActive(), refetchOngoing(),
-      refetchAnswered(), refetchCounts(), refetchDevotion(),
-    ]);
+    await Promise.all([refetchActive(), refetchOngoing(), refetchAnswered(), refetchCounts(), refetchDevotion()]);
     setRefreshing(false);
   }, []);
 
-  const name = profile?.display_name ?? "Friend";
+  const rollVerse = () => setVerse(getRandomVerse());
+  const name = (profile?.display_name ?? "Friend").split(" ")[0];
+  const today = format(new Date(), "EEEE, MMMM d");
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: "#F5F0E8" }}
-      contentContainerStyle={{ paddingBottom: 32 }}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#F5B942" />
-      }
+      style={{ flex: 1, backgroundColor: Theme.bg }}
+      contentContainerStyle={{ paddingBottom: 36 }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Theme.primary} />}
     >
       {/* Header */}
       <View
         style={{
-          paddingTop: 64,
-          paddingHorizontal: 24,
-          paddingBottom: 20,
-          flexDirection: "row",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
+          paddingTop: 62, paddingHorizontal: 22, paddingBottom: 18,
+          flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between",
         }}
       >
-        <View>
-          <Text style={{ fontFamily: "DMSans-Regular", fontSize: 14, color: "#8A8A8A" }}>
-            {getGreeting()},
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 13, color: Theme.textFaint, marginBottom: 3 }}>
+            {today}
           </Text>
-          <Text style={{ fontFamily: "PlayfairDisplay-Bold", fontSize: 28, color: "#1A1A1A" }}>
-            {name}.
+          <Text style={{ fontFamily: Theme.font.serif, fontSize: 28, color: Theme.text }}>
+            {getGreeting()}, {name}
           </Text>
         </View>
         <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
-          <TouchableOpacity
-            onPress={() => router.push("/notifications")}
-            style={{
-              width: 38, height: 38, borderRadius: 19,
-              backgroundColor: "#FFFFFF",
-              alignItems: "center", justifyContent: "center",
-            }}
-          >
-            <Ionicons name="notifications-outline" size={20} color="#4A4A4A" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => router.push("/settings")}
-            style={{
-              width: 38, height: 38, borderRadius: 19,
-              backgroundColor: "#FFFFFF",
-              alignItems: "center", justifyContent: "center",
-            }}
-          >
-            <Ionicons name="settings-outline" size={20} color="#4A4A4A" />
-          </TouchableOpacity>
+          <RoundButton name="bell" onPress={() => router.push("/notifications")} dot />
+          <RoundButton name="gear" onPress={() => router.push("/settings")} />
         </View>
       </View>
 
-      {/* Today's Devotion card */}
-      <DevotionCard />
-
-      {/* See all devotions link */}
+      {/* Devotion */}
+      <DevotionHero />
       {devotions.length > 0 && (
         <TouchableOpacity
           onPress={() => router.push("/devotions")}
-          style={{ paddingHorizontal: 24, marginBottom: 8, marginTop: -16, alignItems: "flex-end" }}
+          style={{ paddingHorizontal: 22, marginBottom: 18, alignItems: "flex-end" }}
         >
-          <Text style={{ fontFamily: "DMSans-Medium", fontSize: 13, color: "#F5B942" }}>
+          <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 13, color: Theme.primary }}>
             See all devotions →
           </Text>
         </TouchableOpacity>
       )}
 
-      {/* Daily Verse */}
-      <View
-        style={{
-          marginHorizontal: 24, marginBottom: 20,
-          backgroundColor: "#F5B942", borderRadius: 20, padding: 20,
-        }}
-      >
-        <Text
-          style={{
-            fontFamily: "DMSans-SemiBold", fontSize: 10, color: "rgba(255,255,255,0.8)",
-            textTransform: "uppercase", letterSpacing: 1, marginBottom: 10,
-          }}
-        >
-          Today's Verse
-        </Text>
-        <Text
-          style={{
-            fontFamily: "PlayfairDisplay-SemiBold", fontSize: 15,
-            color: "#FFFFFF", lineHeight: 24, fontStyle: "italic", marginBottom: 10,
-          }}
-        >
-          "{verse.verse_text}"
-        </Text>
-        <Text style={{ fontFamily: "DMSans-SemiBold", fontSize: 13, color: "rgba(255,255,255,0.9)" }}>
-          — {verse.reference}
-        </Text>
+      {/* Verse */}
+      <View style={{ marginHorizontal: 22, marginBottom: 26 }}>
+        <VerseBlock text={`"${verse.verse_text}"`} reference={verse.reference} onRefresh={rollVerse} />
       </View>
 
-      {/* Stats row */}
-      <View style={{ flexDirection: "row", gap: 10, marginHorizontal: 24, marginBottom: 28 }}>
-        {[
-          { label: "Active",   value: String(counts?.active ?? 0),   icon: "time-outline" },
-          { label: "Answered", value: String(counts?.answered ?? 0), icon: "checkmark-circle-outline" },
-          { label: "Streak",   value: (profile?.prayer_streak ?? 0) + "d", icon: "flame-outline" },
-        ].map((stat) => (
-          <View
-            key={stat.label}
-            style={{
-              flex: 1, backgroundColor: "#FFFFFF", borderRadius: 16,
-              padding: 14, alignItems: "center",
-            }}
-          >
-            <Ionicons name={stat.icon as any} size={20} color="#F5B942" />
-            <Text style={{ fontFamily: "PlayfairDisplay-Bold", fontSize: 20, color: "#1A1A1A", marginTop: 4 }}>
-              {stat.value}
-            </Text>
-            <Text style={{ fontFamily: "DMSans-Regular", fontSize: 11, color: "#8A8A8A", marginTop: 2 }}>
-              {stat.label}
-            </Text>
-          </View>
-        ))}
-      </View>
-
-      {/* Active Requests */}
-      <SectionHeader title="Active Requests" onSeeAll={() => router.push("/(tabs)/pray")} />
-      <View style={{ marginHorizontal: 24, marginBottom: 24 }}>
+      {/* Prayer Requests */}
+      <View style={{ marginHorizontal: 22, marginBottom: 24 }}>
+        <SectionHeader
+          title="Prayer Requests"
+          count={counts?.active ?? active.length}
+          onAll={() => router.push("/(tabs)/pray")}
+          onAdd={() => router.push("/prayer/new")}
+        />
         {active.length === 0 ? (
-          <EmptyCard
-            text="No active requests yet."
-            action="Add your first prayer"
-            onPress={() => router.push("/prayer/new")}
-          />
+          <Empty text="No active requests yet." action="Add your first prayer" onPress={() => router.push("/prayer/new")} />
         ) : (
-          <>
-            {active.slice(0, 3).map((p) => <PrayerCard key={p.id} prayer={p} />)}
-            {active.length > 3 && (
-              <TouchableOpacity onPress={() => router.push("/(tabs)/pray")} style={{ alignItems: "center", paddingVertical: 8 }}>
-                <Text style={{ fontFamily: "DMSans-Medium", fontSize: 13, color: "#F5B942" }}>
-                  +{active.length - 3} more
-                </Text>
-              </TouchableOpacity>
-            )}
-          </>
+          active.slice(0, 3).map((p: PrayerRequest) => <PrayerCard key={p.id} prayer={p} />)
         )}
       </View>
 
       {/* Ongoing Needs */}
-      <SectionHeader title="Ongoing Needs" onSeeAll={() => router.push("/(tabs)/pray")} />
-      <View style={{ marginHorizontal: 24, marginBottom: 24 }}>
-        {ongoing.length === 0 ? (
-          <EmptyCard
-            text="No ongoing requests."
-            action="Add an ongoing need"
-            onPress={() => router.push("/prayer/new")}
-          />
-        ) : (
-          <>
-            {ongoing.slice(0, 3).map((p) => <PrayerCard key={p.id} prayer={p} />)}
-            {ongoing.length > 3 && (
-              <TouchableOpacity onPress={() => router.push("/(tabs)/pray")} style={{ alignItems: "center", paddingVertical: 8 }}>
-                <Text style={{ fontFamily: "DMSans-Medium", fontSize: 13, color: "#F5B942" }}>
-                  +{ongoing.length - 3} more
-                </Text>
-              </TouchableOpacity>
-            )}
-          </>
-        )}
-      </View>
+      {ongoing.length > 0 && (
+        <View style={{ marginHorizontal: 22, marginBottom: 24 }}>
+          <SectionHeader title="Ongoing Needs" count={ongoing.length} onAll={() => router.push("/(tabs)/pray")} />
+          {ongoing.slice(0, 2).map((p: PrayerRequest) => <PrayerCard key={p.id} prayer={p} compact />)}
+        </View>
+      )}
 
       {/* Answered Prayers */}
-      <SectionHeader title="Answered Prayers" onSeeAll={() => router.push("/(tabs)/pray")} />
-      <View style={{ marginHorizontal: 24 }}>
-        {answered.length === 0 ? (
-          <EmptyCard text="No answered prayers recorded yet." />
-        ) : (
-          answered.slice(0, 3).map((p) => <PrayerCard key={p.id} prayer={p} />)
-        )}
-      </View>
+      {answered.length > 0 && (
+        <View style={{ marginHorizontal: 22 }}>
+          <SectionHeader title="Answered Prayers" count={answered.length} onAll={() => router.push("/(tabs)/pray")} />
+          {answered.slice(0, 2).map((p: PrayerRequest) => <PrayerCard key={p.id} prayer={p} compact />)}
+        </View>
+      )}
     </ScrollView>
   );
 }
 
-function SectionHeader({ title, onSeeAll }: { title: string; onSeeAll?: () => void }) {
+function Empty({ text, action, onPress }: { text: string; action?: string; onPress?: () => void }) {
   return (
     <View
       style={{
-        flexDirection: "row", alignItems: "center",
-        justifyContent: "space-between",
-        marginHorizontal: 24, marginBottom: 10,
+        backgroundColor: Theme.card, borderRadius: Theme.radius.card,
+        borderWidth: 1, borderColor: Theme.cardBorder,
+        padding: 22, alignItems: "center", ...Theme.shadow,
       }}
     >
-      <Text style={{ fontFamily: "PlayfairDisplay-SemiBold", fontSize: 18, color: "#1A1A1A" }}>
-        {title}
-      </Text>
-      {onSeeAll && (
-        <TouchableOpacity onPress={onSeeAll}>
-          <Text style={{ fontFamily: "DMSans-Medium", fontSize: 13, color: "#F5B942" }}>
-            See all
-          </Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
-}
-
-function EmptyCard({ text, action, onPress }: { text: string; action?: string; onPress?: () => void }) {
-  return (
-    <View
-      style={{
-        backgroundColor: "#FFFFFF", borderRadius: 16, padding: 20, alignItems: "center",
-      }}
-    >
-      <Ionicons name="add-circle-outline" size={28} color="#EDE5D8" />
-      <Text
-        style={{
-          fontFamily: "DMSans-Regular", fontSize: 13, color: "#8A8A8A",
-          textAlign: "center", marginTop: 8,
-        }}
-      >
+      <Icon name="plus" size={26} color={Theme.textFaint} />
+      <Text style={{ fontFamily: Theme.font.sans, fontSize: 14, color: Theme.textMuted, textAlign: "center", marginTop: 10 }}>
         {text}
       </Text>
       {action && onPress && (
-        <TouchableOpacity onPress={onPress} style={{ marginTop: 10 }}>
-          <Text style={{ fontFamily: "DMSans-SemiBold", fontSize: 13, color: "#F5B942" }}>
-            {action}
-          </Text>
+        <TouchableOpacity onPress={onPress} style={{ marginTop: 12 }}>
+          <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 14, color: Theme.primary }}>{action}</Text>
         </TouchableOpacity>
       )}
     </View>

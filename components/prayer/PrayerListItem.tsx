@@ -1,121 +1,81 @@
 import { View, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { PrayerRequest } from "@/types";
-import { CategoryChip } from "./CategoryChip";
+import { Theme } from "@/constants/theme";
+import { Icon } from "@/components/ui/Icon";
 
 interface PrayerListItemProps {
   prayer: PrayerRequest;
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  active: "Active",
-  ongoing: "Ongoing",
-};
-
 export function PrayerListItem({ prayer }: PrayerListItemProps) {
   const router = useRouter();
+  const cats = prayer.categories ?? [];
 
   return (
     <TouchableOpacity
       onPress={() => router.push(`/prayer/${prayer.id}`)}
+      activeOpacity={0.8}
       style={{
-        backgroundColor: "#1A1A1A",
-        borderRadius: 14,
+        backgroundColor: Theme.darkSurface,
+        borderRadius: Theme.radius.inner,
+        borderWidth: 1,
+        borderColor: Theme.darkBorder,
         padding: 16,
         marginBottom: 10,
-        borderLeftWidth: prayer.is_urgent ? 3 : 0,
-        borderLeftColor: "#E53E3E",
       }}
-      activeOpacity={0.75}
     >
-      {/* Top row */}
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 6,
-        }}
-      >
-        {prayer.is_urgent ? (
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <Ionicons name="alert-circle" size={12} color="#E53E3E" />
+      <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
+        <View style={{ flex: 1, marginRight: 10 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+            {prayer.is_urgent && <Icon name="flame" size={15} color={Theme.urgent} />}
             <Text
-              style={{
-                fontFamily: "DMSans-SemiBold",
-                fontSize: 10,
-                color: "#E53E3E",
-                marginLeft: 4,
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-              }}
+              style={{ fontFamily: Theme.font.serif, fontSize: 17, color: Theme.darkText, flex: 1 }}
+              numberOfLines={1}
             >
-              Urgent
+              {prayer.title}
             </Text>
           </View>
-        ) : (
-          <View
-            style={{
-              backgroundColor: "#2A2A2A",
-              borderRadius: 100,
-              paddingHorizontal: 8,
-              paddingVertical: 2,
-            }}
-          >
+
+          {prayer.description ? (
             <Text
               style={{
-                fontFamily: "DMSans-Medium",
-                fontSize: 10,
-                color: "#9A9A9A",
-                textTransform: "uppercase",
-                letterSpacing: 0.4,
+                fontFamily: Theme.font.sans,
+                fontSize: 13.5,
+                color: Theme.darkMuted,
+                lineHeight: 19,
+                marginTop: 5,
               }}
+              numberOfLines={2}
             >
-              {STATUS_LABEL[prayer.status] ?? prayer.status}
+              {prayer.description}
             </Text>
-          </View>
-        )}
-        <Ionicons name="chevron-forward" size={14} color="#4A4A4A" />
-      </View>
+          ) : null}
 
-      {/* Title */}
-      <Text
-        style={{
-          fontFamily: "DMSans-SemiBold",
-          fontSize: 16,
-          color: "#FFFFFF",
-          marginBottom: prayer.description ? 4 : 8,
-        }}
-        numberOfLines={1}
-      >
-        {prayer.title}
-      </Text>
-
-      {/* Description preview */}
-      {prayer.description ? (
-        <Text
-          style={{
-            fontFamily: "DMSans-Regular",
-            fontSize: 13,
-            color: "#9A9A9A",
-            marginBottom: 10,
-            lineHeight: 18,
-          }}
-          numberOfLines={1}
-        >
-          {prayer.description}
-        </Text>
-      ) : null}
-
-      {/* Categories */}
-      {prayer.categories && prayer.categories.length > 0 && (
-        <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-          {prayer.categories.map((cat) => (
-            <CategoryChip key={cat.id} category={cat} dark />
-          ))}
+          {cats.length > 0 && (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 11 }}>
+              {cats.map((cat) => (
+                <View
+                  key={cat.id}
+                  style={{
+                    backgroundColor: "rgba(255,255,255,0.07)",
+                    borderRadius: Theme.radius.pill,
+                    paddingHorizontal: 10,
+                    paddingVertical: 3,
+                  }}
+                >
+                  <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 12, color: Theme.darkMuted }}>
+                    {cat.name}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
-      )}
+        <View style={{ marginTop: 3 }}>
+          <Icon name="right" size={18} color={Theme.darkMuted} />
+        </View>
+      </View>
     </TouchableOpacity>
   );
 }
