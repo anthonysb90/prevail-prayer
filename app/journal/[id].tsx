@@ -4,9 +4,10 @@ import {
   Alert, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { format } from "date-fns";
 import { useJournalEntry, useUpdateJournalEntry, useDeleteJournalEntry } from "@/hooks/useJournal";
+import { Theme } from "@/constants/theme";
+import { Icon } from "@/components/ui/Icon";
 
 export default function JournalEntryScreen() {
   const router = useRouter();
@@ -19,173 +20,74 @@ export default function JournalEntryScreen() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
 
-  const startEdit = () => {
-    setTitle(entry?.title ?? "");
-    setBody(entry?.body ?? "");
-    setEditing(true);
-  };
-
+  const startEdit = () => { setTitle(entry?.title ?? ""); setBody(entry?.body ?? ""); setEditing(true); };
   const handleSave = async () => {
-    if (!body.trim()) { Alert.alert("Body cannot be empty."); return; }
-    try {
-      await updateEntry.mutateAsync({ id, title: title.trim() || null, body });
-      setEditing(false);
-    } catch (e: any) {
-      Alert.alert("Error saving", e.message);
-    }
+    if (!body.trim()) return Alert.alert("Body cannot be empty.");
+    try { await updateEntry.mutateAsync({ id, title: title.trim() || null, body }); setEditing(false); }
+    catch (e: any) { Alert.alert("Error saving", e.message); }
   };
-
   const handleDelete = () => {
-    Alert.alert(
-      "Delete Entry",
-      "This journal entry will be permanently deleted.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            await deleteEntry.mutateAsync(id);
-            router.back();
-          },
-        },
-      ]
-    );
+    Alert.alert("Delete Entry", "This journal entry will be permanently deleted.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: async () => { await deleteEntry.mutateAsync(id); router.back(); } },
+    ]);
   };
 
-  if (isLoading) {
-    return (
-      <View className="flex-1 bg-cream-100 items-center justify-center">
-        <ActivityIndicator color="#F5B942" />
-      </View>
-    );
-  }
-
-  if (!entry) {
-    return (
-      <View className="flex-1 bg-cream-100 items-center justify-center">
-        <Text className="text-charcoal-400" style={{ fontFamily: "DMSans-Regular" }}>
-          Entry not found.
-        </Text>
-      </View>
-    );
-  }
+  if (isLoading) return <View style={{ flex: 1, backgroundColor: Theme.bg, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color={Theme.primary} /></View>;
+  if (!entry) return <View style={{ flex: 1, backgroundColor: Theme.bg, alignItems: "center", justifyContent: "center" }}><Text style={{ fontFamily: Theme.font.sans, color: Theme.textMuted }}>Entry not found.</Text></View>;
 
   if (editing) {
     return (
-      <KeyboardAvoidingView
-        className="flex-1 bg-cream-100"
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        <View className="px-6 pt-16 pb-4 flex-row items-center justify-between">
-          <TouchableOpacity onPress={() => setEditing(false)}>
-            <Ionicons name="close" size={24} color="#4A4A4A" />
-          </TouchableOpacity>
-          <Text style={{ fontFamily: "PlayfairDisplay-Bold", fontSize: 20 }} className="text-charcoal-900">
-            Edit Entry
-          </Text>
+      <KeyboardAvoidingView style={{ flex: 1, backgroundColor: Theme.bg }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+        <View style={{ paddingHorizontal: 22, paddingTop: 60, paddingBottom: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <TouchableOpacity onPress={() => setEditing(false)}><Icon name="x" size={24} color={Theme.text} /></TouchableOpacity>
+          <Text style={{ fontFamily: Theme.font.serif, fontSize: 20, color: Theme.text }}>Edit Entry</Text>
           <TouchableOpacity onPress={handleSave} disabled={updateEntry.isPending}>
-            {updateEntry.isPending ? (
-              <ActivityIndicator size="small" color="#F5B942" />
-            ) : (
-              <Text className="text-amber-500" style={{ fontFamily: "DMSans-SemiBold", fontSize: 16 }}>
-                Save
-              </Text>
-            )}
+            {updateEntry.isPending ? <ActivityIndicator size="small" color={Theme.primary} />
+              : <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 16, color: Theme.primary }}>Save</Text>}
           </TouchableOpacity>
         </View>
-        <ScrollView className="flex-1" keyboardShouldPersistTaps="handled">
-          <TextInput
-            className="px-6 bg-transparent text-charcoal-900 mb-1"
-            style={{ fontFamily: "PlayfairDisplay-SemiBold", fontSize: 22 }}
-            placeholder="Title (optional)"
-            placeholderTextColor="#8A8A8A"
-            value={title}
-            onChangeText={setTitle}
-          />
-          <TextInput
-            className="px-6 flex-1 bg-transparent text-charcoal-900"
-            style={{ fontFamily: "DMSans-Regular", fontSize: 16, lineHeight: 26, textAlignVertical: "top", minHeight: 300 }}
-            value={body}
-            onChangeText={setBody}
-            multiline
-            autoFocus
-          />
+        <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
+          <TextInput style={{ paddingHorizontal: 22, fontFamily: Theme.font.serif, fontSize: 24, color: Theme.text, marginBottom: 4 }} placeholder="Title (optional)" placeholderTextColor={Theme.textFaint} value={title} onChangeText={setTitle} />
+          <TextInput style={{ paddingHorizontal: 22, flex: 1, fontFamily: Theme.font.sans, fontSize: 16, lineHeight: 26, color: Theme.text, textAlignVertical: "top", minHeight: 300 }} value={body} onChangeText={setBody} multiline autoFocus />
         </ScrollView>
       </KeyboardAvoidingView>
     );
   }
 
   return (
-    <View className="flex-1 bg-cream-100">
-      {/* Header */}
-      <View className="px-6 pt-16 pb-4 flex-row items-center justify-between">
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={22} color="#4A4A4A" />
-        </TouchableOpacity>
-        <View className="flex-row gap-4">
-          <TouchableOpacity onPress={startEdit}>
-            <Ionicons name="create-outline" size={22} color="#4A4A4A" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleDelete}>
-            <Ionicons name="trash-outline" size={22} color="#E53E3E" />
-          </TouchableOpacity>
+    <View style={{ flex: 1, backgroundColor: Theme.bg }}>
+      <View style={{ paddingHorizontal: 22, paddingTop: 60, paddingBottom: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <TouchableOpacity onPress={() => router.back()}><Icon name="left" size={22} color={Theme.text} /></TouchableOpacity>
+        <View style={{ flexDirection: "row", gap: 18 }}>
+          <TouchableOpacity onPress={startEdit}><Icon name="edit" size={21} color={Theme.text} /></TouchableOpacity>
+          <TouchableOpacity onPress={handleDelete}><Icon name="trash" size={21} color={Theme.urgent} /></TouchableOpacity>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 48 }}>
-        {/* Date */}
-        <Text
-          style={{ fontFamily: "DMSans-Regular", fontSize: 12, color: "#8A8A8A", marginBottom: 12, textTransform: "uppercase", letterSpacing: 0.5 }}
-        >
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 48 }}>
+        <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 12, color: Theme.textFaint, marginBottom: 12 }}>
           {format(new Date(entry.created_at), "MMMM d, yyyy · h:mm a")}
         </Text>
+        {entry.title ? <Text style={{ fontFamily: Theme.font.serif, fontSize: 27, color: Theme.text, marginBottom: 16, lineHeight: 35 }}>{entry.title}</Text> : null}
+        <Text style={{ fontFamily: Theme.font.serifReg, fontSize: 17, color: Theme.text, lineHeight: 28 }}>{entry.body}</Text>
 
-        {/* Title */}
-        {entry.title ? (
-          <Text
-            style={{ fontFamily: "PlayfairDisplay-Bold", fontSize: 26, color: "#1A1A1A", marginBottom: 16, lineHeight: 34 }}
-          >
-            {entry.title}
-          </Text>
-        ) : null}
-
-        {/* Body */}
-        <Text
-          style={{ fontFamily: "DMSans-Regular", fontSize: 16, color: "#1A1A1A", lineHeight: 28 }}
-        >
-          {entry.body}
-        </Text>
-
-        {/* Linked prayer */}
         {(entry as any).prayer_requests && (
           <TouchableOpacity
             onPress={() => router.push(`/prayer/${(entry as any).prayer_requests.id}`)}
-            style={{
-              flexDirection: "row", alignItems: "center",
-              marginTop: 32, padding: 16,
-              backgroundColor: "#FFFFFF", borderRadius: 14,
-              borderWidth: 1, borderColor: "#EDE5D8",
-            }}
+            style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 32, padding: 16, backgroundColor: Theme.card, borderRadius: Theme.radius.card, borderWidth: 1, borderColor: Theme.cardBorder, ...Theme.shadow }}
           >
-            <Ionicons name="link-outline" size={18} color="#F5B942" />
-            <View style={{ marginLeft: 12, flex: 1 }}>
-              <Text style={{ fontFamily: "DMSans-Regular", fontSize: 11, color: "#8A8A8A", textTransform: "uppercase", letterSpacing: 0.4 }}>
-                Linked Prayer
-              </Text>
-              <Text style={{ fontFamily: "DMSans-SemiBold", fontSize: 15, color: "#1A1A1A", marginTop: 2 }} numberOfLines={1}>
-                {(entry as any).prayer_requests.title}
-              </Text>
+            <Icon name="pray" size={18} color={Theme.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontFamily: Theme.font.sansBold, fontSize: 11, color: Theme.primary, textTransform: "uppercase", letterSpacing: 1 }}>Linked Prayer</Text>
+              <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 15, color: Theme.text, marginTop: 2 }} numberOfLines={1}>{(entry as any).prayer_requests.title}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color="#8A8A8A" />
+            <Icon name="right" size={16} color={Theme.textFaint} />
           </TouchableOpacity>
         )}
 
-        {/* Last edited */}
         {entry.updated_at !== entry.created_at && (
-          <Text
-            style={{ fontFamily: "DMSans-Regular", fontSize: 11, color: "#8A8A8A", marginTop: 24, textAlign: "center" }}
-          >
+          <Text style={{ fontFamily: Theme.font.sans, fontSize: 12, color: Theme.textFaint, marginTop: 24, textAlign: "center" }}>
             Edited {format(new Date(entry.updated_at), "MMM d, yyyy")}
           </Text>
         )}

@@ -12,7 +12,7 @@ export default function TopicScreen() {
   const toggleFavorite = useToggleFavorite();
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#F5F0E8" }}>
+    <View style={{ flex: 1, backgroundColor: "#F1EFF9" }}>
       {/* Header */}
       <View
         style={{
@@ -24,16 +24,16 @@ export default function TopicScreen() {
         }}
       >
         <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
-          <Ionicons name="arrow-back" size={22} color="#4A4A4A" />
+          <Ionicons name="arrow-back" size={22} color="#5A5666" />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text
-            style={{ fontFamily: "DMSans-Regular", fontSize: 12, color: "#8A8A8A", textTransform: "uppercase", letterSpacing: 0.5 }}
+            style={{ fontFamily: "HankenGrotesk_400Regular", fontSize: 12, color: "#9794A4", textTransform: "uppercase", letterSpacing: 0.5 }}
           >
             Scripture
           </Text>
           <Text
-            style={{ fontFamily: "PlayfairDisplay-Bold", fontSize: 26, color: "#1A1A1A" }}
+            style={{ fontFamily: "Newsreader_600SemiBold", fontSize: 26, color: "#1D1B26" }}
           >
             {topic}
           </Text>
@@ -42,17 +42,17 @@ export default function TopicScreen() {
 
       {isLoading ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator color="#F5B942" />
+          <ActivityIndicator color="#5B53C6" />
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
           <Text
-            style={{ fontFamily: "DMSans-Regular", fontSize: 13, color: "#8A8A8A", marginBottom: 20 }}
+            style={{ fontFamily: "HankenGrotesk_400Regular", fontSize: 13, color: "#9794A4", marginBottom: 20 }}
           >
             {verses.length} {verses.length === 1 ? "verse" : "verses"} · King James Version
           </Text>
 
-          {verses.map((verse) => {
+          {verses.map((verse: ScriptureVerse) => {
             const isFavorited = favoriteIds.includes(verse.id);
             return (
               <VerseCard
@@ -98,14 +98,14 @@ function VerseCard({
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
         <View
           style={{
-            backgroundColor: "#FFF8E8",
+            backgroundColor: "#ECEAFA",
             borderRadius: 100,
             paddingHorizontal: 12,
             paddingVertical: 5,
           }}
         >
           <Text
-            style={{ fontFamily: "DMSans-SemiBold", fontSize: 13, color: "#F5B942" }}
+            style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 13, color: "#5B53C6" }}
           >
             {verse.reference}
           </Text>
@@ -114,7 +114,7 @@ function VerseCard({
           <Ionicons
             name={isFavorited ? "heart" : "heart-outline"}
             size={22}
-            color={isFavorited ? "#E53E3E" : "#8A8A8A"}
+            color={isFavorited ? "#E0556B" : "#9794A4"}
           />
         </TouchableOpacity>
       </View>
@@ -122,9 +122,9 @@ function VerseCard({
       {/* Verse text */}
       <Text
         style={{
-          fontFamily: "PlayfairDisplay-SemiBold",
+          fontFamily: "Newsreader_500Medium",
           fontSize: 16,
-          color: "#1A1A1A",
+          color: "#1D1B26",
           lineHeight: 26,
           fontStyle: "italic",
         }}

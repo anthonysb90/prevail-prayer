@@ -165,36 +165,36 @@ function RemindersContent() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#F5F0E8" }}>
+    <View style={{ flex: 1, backgroundColor: "#F1EFF9" }}>
       {/* Header */}
       <View style={{ paddingTop: 64, paddingHorizontal: 24, paddingBottom: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
-            <Ionicons name="arrow-back" size={22} color="#4A4A4A" />
+            <Ionicons name="arrow-back" size={22} color="#5A5666" />
           </TouchableOpacity>
-          <Text style={{ fontFamily: "PlayfairDisplay-Bold", fontSize: 24, color: "#1A1A1A" }}>
+          <Text style={{ fontFamily: "Newsreader_600SemiBold", fontSize: 24, color: "#1D1B26" }}>
             General Reminders
           </Text>
         </View>
         <TouchableOpacity
           onPress={() => setShowModal(true)}
-          style={{ backgroundColor: "#F5B942", borderRadius: 20, width: 36, height: 36, alignItems: "center", justifyContent: "center" }}
+          style={{ backgroundColor: "#5B53C6", borderRadius: 20, width: 36, height: 36, alignItems: "center", justifyContent: "center" }}
         >
           <Ionicons name="add" size={22} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
-        <Text style={{ fontFamily: "DMSans-Regular", fontSize: 13, color: "#8A8A8A", marginBottom: 20, lineHeight: 19 }}>
+        <Text style={{ fontFamily: "HankenGrotesk_400Regular", fontSize: 13, color: "#9794A4", marginBottom: 20, lineHeight: 19 }}>
           These reminders are not tied to a specific prayer — just a nudge to open the app and pray.
         </Text>
 
         {loading ? (
-          <ActivityIndicator color="#F5B942" />
+          <ActivityIndicator color="#5B53C6" />
         ) : reminders.length === 0 ? (
           <View style={{ backgroundColor: "#FFFFFF", borderRadius: 16, padding: 24, alignItems: "center" }}>
-            <Ionicons name="notifications-outline" size={36} color="#EDE5D8" />
-            <Text style={{ fontFamily: "DMSans-Regular", fontSize: 14, color: "#8A8A8A", textAlign: "center", marginTop: 12 }}>
+            <Ionicons name="notifications-outline" size={36} color="#E7E5EF" />
+            <Text style={{ fontFamily: "HankenGrotesk_400Regular", fontSize: 14, color: "#9794A4", textAlign: "center", marginTop: 12 }}>
               No reminders yet.{"\n"}Tap + to add your first one.
             </Text>
           </View>
@@ -207,9 +207,9 @@ function RemindersContent() {
                 marginBottom: 10, flexDirection: "row", alignItems: "center",
               }}
             >
-              <Ionicons name="alarm-outline" size={20} color="#F5B942" style={{ marginRight: 12 }} />
+              <Ionicons name="alarm-outline" size={20} color="#5B53C6" style={{ marginRight: 12 }} />
               <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: "DMSans-SemiBold", fontSize: 15, color: "#1A1A1A" }}>
+                <Text style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 15, color: "#1D1B26" }}>
                   {formatReminderLabel(r)}
                 </Text>
               </View>
@@ -217,11 +217,11 @@ function RemindersContent() {
                 <Ionicons
                   name={r.is_active ? "toggle" : "toggle-outline"}
                   size={28}
-                  color={r.is_active ? "#F5B942" : "#8A8A8A"}
+                  color={r.is_active ? "#5B53C6" : "#9794A4"}
                 />
               </TouchableOpacity>
               <TouchableOpacity onPress={() => handleDelete(r)}>
-                <Ionicons name="trash-outline" size={18} color="#8A8A8A" />
+                <Ionicons name="trash-outline" size={18} color="#9794A4" />
               </TouchableOpacity>
             </View>
           ))
@@ -231,13 +231,13 @@ function RemindersContent() {
       {/* Add reminder modal */}
       <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
         <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" }}>
-          <View style={{ backgroundColor: "#F5F0E8", borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, paddingBottom: 44 }}>
-            <Text style={{ fontFamily: "PlayfairDisplay-Bold", fontSize: 22, color: "#1A1A1A", marginBottom: 20 }}>
+          <View style={{ backgroundColor: "#F1EFF9", borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, paddingBottom: 44 }}>
+            <Text style={{ fontFamily: "Newsreader_600SemiBold", fontSize: 22, color: "#1D1B26", marginBottom: 20 }}>
               Add Reminder
             </Text>
 
             {/* Recurrence type */}
-            <Text style={{ fontFamily: "DMSans-Medium", fontSize: 12, color: "#8A8A8A", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
+            <Text style={{ fontFamily: "HankenGrotesk_500Medium", fontSize: 12, color: "#9794A4", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
               Frequency
             </Text>
             <View style={{ flexDirection: "row", gap: 10, marginBottom: 20 }}>
@@ -247,12 +247,12 @@ function RemindersContent() {
                   onPress={() => setRecurrence(r)}
                   style={{
                     flex: 1, paddingVertical: 12, borderRadius: 100,
-                    backgroundColor: recurrence === r ? "#1A1A1A" : "#FFFFFF",
+                    backgroundColor: recurrence === r ? "#1D1B26" : "#FFFFFF",
                     alignItems: "center",
-                    borderWidth: 1, borderColor: recurrence === r ? "#1A1A1A" : "#EDE5D8",
+                    borderWidth: 1, borderColor: recurrence === r ? "#1D1B26" : "#E7E5EF",
                   }}
                 >
-                  <Text style={{ fontFamily: "DMSans-SemiBold", fontSize: 14, color: recurrence === r ? "#FFFFFF" : "#4A4A4A" }}>
+                  <Text style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 14, color: recurrence === r ? "#FFFFFF" : "#5A5666" }}>
                     {r === "daily" ? "Every Day" : "Weekly"}
                   </Text>
                 </TouchableOpacity>
@@ -262,7 +262,7 @@ function RemindersContent() {
             {/* Day picker (weekly only) */}
             {recurrence === "weekly" && (
               <>
-                <Text style={{ fontFamily: "DMSans-Medium", fontSize: 12, color: "#8A8A8A", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
+                <Text style={{ fontFamily: "HankenGrotesk_500Medium", fontSize: 12, color: "#9794A4", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
                   Days
                 </Text>
                 <View style={{ flexDirection: "row", gap: 8, marginBottom: 20 }}>
@@ -274,12 +274,12 @@ function RemindersContent() {
                         onPress={() => toggleDay(i)}
                         style={{
                           flex: 1, paddingVertical: 8, borderRadius: 10,
-                          backgroundColor: selected ? "#F5B942" : "#FFFFFF",
+                          backgroundColor: selected ? "#5B53C6" : "#FFFFFF",
                           alignItems: "center",
-                          borderWidth: 1, borderColor: selected ? "#F5B942" : "#EDE5D8",
+                          borderWidth: 1, borderColor: selected ? "#5B53C6" : "#E7E5EF",
                         }}
                       >
-                        <Text style={{ fontFamily: "DMSans-Medium", fontSize: 12, color: selected ? "#FFFFFF" : "#4A4A4A" }}>
+                        <Text style={{ fontFamily: "HankenGrotesk_500Medium", fontSize: 12, color: selected ? "#FFFFFF" : "#5A5666" }}>
                           {day}
                         </Text>
                       </TouchableOpacity>
@@ -290,17 +290,17 @@ function RemindersContent() {
             )}
 
             {/* Time picker */}
-            <Text style={{ fontFamily: "DMSans-Medium", fontSize: 12, color: "#8A8A8A", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
+            <Text style={{ fontFamily: "HankenGrotesk_500Medium", fontSize: 12, color: "#9794A4", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
               Time
             </Text>
             <TouchableOpacity
               onPress={() => setShowTimePicker(true)}
               style={{ backgroundColor: "#FFFFFF", borderRadius: 14, padding: 16, marginBottom: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
             >
-              <Text style={{ fontFamily: "DMSans-SemiBold", fontSize: 18, color: "#1A1A1A" }}>
+              <Text style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 18, color: "#1D1B26" }}>
                 {format(time, "h:mm a")}
               </Text>
-              <Ionicons name="time-outline" size={20} color="#8A8A8A" />
+              <Ionicons name="time-outline" size={20} color="#9794A4" />
             </TouchableOpacity>
 
             {showTimePicker && (
@@ -318,18 +318,18 @@ function RemindersContent() {
             <TouchableOpacity
               onPress={handleAdd}
               disabled={saving}
-              style={{ backgroundColor: "#F5B942", borderRadius: 100, paddingVertical: 16, alignItems: "center" }}
+              style={{ backgroundColor: "#5B53C6", borderRadius: 100, paddingVertical: 16, alignItems: "center" }}
             >
               {saving ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={{ fontFamily: "DMSans-SemiBold", fontSize: 16, color: "#FFFFFF" }}>
+                <Text style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 16, color: "#FFFFFF" }}>
                   Add Reminder
                 </Text>
               )}
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setShowModal(false)} style={{ alignItems: "center", paddingTop: 14 }}>
-              <Text style={{ fontFamily: "DMSans-Regular", fontSize: 14, color: "#8A8A8A" }}>Cancel</Text>
+              <Text style={{ fontFamily: "HankenGrotesk_400Regular", fontSize: 14, color: "#9794A4" }}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>

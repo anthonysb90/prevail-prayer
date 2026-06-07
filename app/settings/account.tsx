@@ -102,16 +102,16 @@ export default function AccountScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#F5F0E8" }}>
+    <View style={{ flex: 1, backgroundColor: "#F1EFF9" }}>
       {/* Header */}
       <View style={{
         paddingTop: 64, paddingHorizontal: 24, paddingBottom: 16,
         flexDirection: "row", alignItems: "center",
       }}>
         <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
-          <Ionicons name="arrow-back" size={22} color="#4A4A4A" />
+          <Ionicons name="arrow-back" size={22} color="#5A5666" />
         </TouchableOpacity>
-        <Text style={{ fontFamily: "PlayfairDisplay-Bold", fontSize: 26, color: "#1A1A1A" }}>
+        <Text style={{ fontFamily: "Newsreader_600SemiBold", fontSize: 26, color: "#1D1B26" }}>
           Account
         </Text>
       </View>
@@ -120,29 +120,29 @@ export default function AccountScreen() {
         {/* Profile section */}
         <View style={{ backgroundColor: "#FFFFFF", borderRadius: 20, padding: 20, marginBottom: 20 }}>
           <Text style={{
-            fontFamily: "DMSans-Medium", fontSize: 11, color: "#8A8A8A",
+            fontFamily: "HankenGrotesk_500Medium", fontSize: 11, color: "#9794A4",
             textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 16,
           }}>
             Profile
           </Text>
 
-          <Text style={{ fontFamily: "DMSans-Medium", fontSize: 13, color: "#4A4A4A", marginBottom: 6 }}>
+          <Text style={{ fontFamily: "HankenGrotesk_500Medium", fontSize: 13, color: "#5A5666", marginBottom: 6 }}>
             Display Name
           </Text>
           <TextInput
             value={displayName}
             onChangeText={setDisplayName}
             style={{
-              backgroundColor: "#F5F0E8",
+              backgroundColor: "#F1EFF9",
               borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
-              fontFamily: "DMSans-Regular", fontSize: 16, color: "#1A1A1A",
+              fontFamily: "HankenGrotesk_400Regular", fontSize: 16, color: "#1D1B26",
               marginBottom: 16,
             }}
             placeholder="Your name"
-            placeholderTextColor="#8A8A8A"
+            placeholderTextColor="#9794A4"
           />
 
-          <Text style={{ fontFamily: "DMSans-Medium", fontSize: 13, color: "#4A4A4A", marginBottom: 6 }}>
+          <Text style={{ fontFamily: "HankenGrotesk_500Medium", fontSize: 13, color: "#5A5666", marginBottom: 6 }}>
             Phone Number
           </Text>
           <TextInput
@@ -150,16 +150,16 @@ export default function AccountScreen() {
             onChangeText={(t) => setPhone(formatPhone(t))}
             keyboardType="phone-pad"
             style={{
-              backgroundColor: "#F5F0E8",
+              backgroundColor: "#F1EFF9",
               borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
-              fontFamily: "DMSans-Regular", fontSize: 16, color: "#1A1A1A",
+              fontFamily: "HankenGrotesk_400Regular", fontSize: 16, color: "#1D1B26",
               marginBottom: 16,
             }}
             placeholder="(555) 123-4567"
-            placeholderTextColor="#8A8A8A"
+            placeholderTextColor="#9794A4"
           />
 
-          <Text style={{ fontFamily: "DMSans-Medium", fontSize: 13, color: "#4A4A4A", marginBottom: 6 }}>
+          <Text style={{ fontFamily: "HankenGrotesk_500Medium", fontSize: 13, color: "#5A5666", marginBottom: 6 }}>
             Zip Code
           </Text>
           <TextInput
@@ -168,22 +168,22 @@ export default function AccountScreen() {
             keyboardType="number-pad"
             maxLength={5}
             style={{
-              backgroundColor: "#F5F0E8",
+              backgroundColor: "#F1EFF9",
               borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
-              fontFamily: "DMSans-Regular", fontSize: 16, color: "#1A1A1A",
+              fontFamily: "HankenGrotesk_400Regular", fontSize: 16, color: "#1D1B26",
               marginBottom: 16,
             }}
             placeholder="30223"
-            placeholderTextColor="#8A8A8A"
+            placeholderTextColor="#9794A4"
           />
 
-          <Text style={{ fontFamily: "DMSans-Medium", fontSize: 13, color: "#4A4A4A", marginBottom: 6 }}>
+          <Text style={{ fontFamily: "HankenGrotesk_500Medium", fontSize: 13, color: "#5A5666", marginBottom: 6 }}>
             Email
           </Text>
           <View style={{
-            backgroundColor: "#F5F0E8", borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
+            backgroundColor: "#F1EFF9", borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
           }}>
-            <Text style={{ fontFamily: "DMSans-Regular", fontSize: 16, color: "#8A8A8A" }}>
+            <Text style={{ fontFamily: "HankenGrotesk_400Regular", fontSize: 16, color: "#9794A4" }}>
               {user?.email ?? "—"}
             </Text>
           </View>
@@ -195,14 +195,14 @@ export default function AccountScreen() {
             onPress={handleSave}
             disabled={saving}
             style={{
-              backgroundColor: "#F5B942", borderRadius: 100, paddingVertical: 16,
+              backgroundColor: "#5B53C6", borderRadius: 100, paddingVertical: 16,
               alignItems: "center", marginBottom: 20,
             }}
           >
             {saving ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={{ fontFamily: "DMSans-SemiBold", fontSize: 16, color: "#FFFFFF" }}>
+              <Text style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 16, color: "#FFFFFF" }}>
                 Save Changes
               </Text>
             )}
@@ -212,7 +212,7 @@ export default function AccountScreen() {
         {/* Stats */}
         <View style={{ backgroundColor: "#FFFFFF", borderRadius: 20, padding: 20, marginBottom: 20 }}>
           <Text style={{
-            fontFamily: "DMSans-Medium", fontSize: 11, color: "#8A8A8A",
+            fontFamily: "HankenGrotesk_500Medium", fontSize: 11, color: "#9794A4",
             textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 16,
           }}>
             Prayer Stats
@@ -223,10 +223,10 @@ export default function AccountScreen() {
               { label: "Subscription", value: profile?.subscription_status ?? "Free" },
             ].map((s) => (
               <View key={s.label} style={{ alignItems: "center" }}>
-                <Text style={{ fontFamily: "PlayfairDisplay-Bold", fontSize: 22, color: "#1A1A1A" }}>
+                <Text style={{ fontFamily: "Newsreader_600SemiBold", fontSize: 22, color: "#1D1B26" }}>
                   {s.value}
                 </Text>
-                <Text style={{ fontFamily: "DMSans-Regular", fontSize: 12, color: "#8A8A8A", marginTop: 2 }}>
+                <Text style={{ fontFamily: "HankenGrotesk_400Regular", fontSize: 12, color: "#9794A4", marginTop: 2 }}>
                   {s.label}
                 </Text>
               </View>
@@ -241,11 +241,11 @@ export default function AccountScreen() {
             disabled={signingOut}
             style={{
               flexDirection: "row", alignItems: "center", paddingHorizontal: 20,
-              paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: "#F5F0E8",
+              paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: "#F1EFF9",
             }}
           >
-            <Ionicons name="log-out-outline" size={20} color="#E53E3E" style={{ marginRight: 12 }} />
-            <Text style={{ fontFamily: "DMSans-SemiBold", fontSize: 15, color: "#E53E3E", flex: 1 }}>
+            <Ionicons name="log-out-outline" size={20} color="#E0556B" style={{ marginRight: 12 }} />
+            <Text style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 15, color: "#E0556B", flex: 1 }}>
               {signingOut ? "Signing out..." : "Sign Out"}
             </Text>
           </TouchableOpacity>
@@ -253,14 +253,14 @@ export default function AccountScreen() {
             onPress={handleDeleteAccount}
             style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 16 }}
           >
-            <Ionicons name="trash-outline" size={20} color="#8A8A8A" style={{ marginRight: 12 }} />
-            <Text style={{ fontFamily: "DMSans-Regular", fontSize: 15, color: "#8A8A8A", flex: 1 }}>
+            <Ionicons name="trash-outline" size={20} color="#9794A4" style={{ marginRight: 12 }} />
+            <Text style={{ fontFamily: "HankenGrotesk_400Regular", fontSize: 15, color: "#9794A4", flex: 1 }}>
               Delete Account
             </Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={{ fontFamily: "DMSans-Regular", fontSize: 12, color: "#8A8A8A", textAlign: "center" }}>
+        <Text style={{ fontFamily: "HankenGrotesk_400Regular", fontSize: 12, color: "#9794A4", textAlign: "center" }}>
           Prevail Prayer v1.0.0{"\n"}support@prevailprayer.com
         </Text>
       </ScrollView>

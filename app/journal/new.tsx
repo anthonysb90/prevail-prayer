@@ -4,16 +4,18 @@ import {
   KeyboardAvoidingView, Platform, Alert, ActivityIndicator, ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { useCreateJournalEntry } from "@/hooks/useJournal";
 import { useActivePrayers, useOngoingPrayers } from "@/hooks/usePrayers";
+import { PrayerRequest } from "@/types";
+import { Theme } from "@/constants/theme";
+import { Icon } from "@/components/ui/Icon";
 
 export default function NewJournalEntryScreen() {
   const router = useRouter();
   const createEntry = useCreateJournalEntry();
   const { data: active = [] } = useActivePrayers();
   const { data: ongoing = [] } = useOngoingPrayers();
-  const allPrayers = [...active, ...ongoing];
+  const allPrayers: PrayerRequest[] = [...active, ...ongoing];
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -23,147 +25,73 @@ export default function NewJournalEntryScreen() {
   const linkedPrayer = allPrayers.find((p) => p.id === linkedPrayerId);
 
   const handleSave = async () => {
-    if (!body.trim()) {
-      Alert.alert("Please write something before saving.");
-      return;
-    }
+    if (!body.trim()) return Alert.alert("Please write something before saving.");
     try {
-      await createEntry.mutateAsync({
-        title,
-        body,
-        prayer_request_id: linkedPrayerId,
-      });
+      await createEntry.mutateAsync({ title, body, prayer_request_id: linkedPrayerId });
       router.back();
-    } catch (e: any) {
-      Alert.alert("Error saving entry", e.message);
-    }
+    } catch (e: any) { Alert.alert("Error saving entry", e.message); }
   };
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-cream-100"
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      {/* Header */}
-      <View className="px-6 pt-16 pb-4 flex-row items-center justify-between">
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="close" size={24} color="#4A4A4A" />
-        </TouchableOpacity>
-        <Text style={{ fontFamily: "PlayfairDisplay-Bold", fontSize: 20 }} className="text-charcoal-900">
-          New Entry
-        </Text>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: Theme.bg }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <View style={{ paddingHorizontal: 22, paddingTop: 60, paddingBottom: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <TouchableOpacity onPress={() => router.back()}><Icon name="x" size={24} color={Theme.text} /></TouchableOpacity>
+        <Text style={{ fontFamily: Theme.font.serif, fontSize: 20, color: Theme.text }}>New Entry</Text>
         <TouchableOpacity onPress={handleSave} disabled={createEntry.isPending}>
-          {createEntry.isPending ? (
-            <ActivityIndicator size="small" color="#F5B942" />
-          ) : (
-            <Text className="text-amber-500" style={{ fontFamily: "DMSans-SemiBold", fontSize: 16 }}>
-              Save
-            </Text>
-          )}
+          {createEntry.isPending ? <ActivityIndicator size="small" color={Theme.primary} />
+            : <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 16, color: body.trim() ? Theme.primary : Theme.textFaint }}>Save</Text>}
         </TouchableOpacity>
       </View>
 
       {showPrayerPicker ? (
-        /* Prayer Picker overlay */
-        <View className="flex-1 bg-cream-100">
-          <View className="px-6 py-4 flex-row items-center justify-between border-b border-cream-200">
-            <Text style={{ fontFamily: "DMSans-SemiBold", fontSize: 16 }} className="text-charcoal-900">
-              Link a Prayer Request
-            </Text>
-            <TouchableOpacity onPress={() => setShowPrayerPicker(false)}>
-              <Ionicons name="close" size={22} color="#4A4A4A" />
-            </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <View style={{ paddingHorizontal: 22, paddingVertical: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: Theme.cardBorder }}>
+            <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 16, color: Theme.text }}>Link a Prayer Request</Text>
+            <TouchableOpacity onPress={() => setShowPrayerPicker(false)}><Icon name="x" size={22} color={Theme.text} /></TouchableOpacity>
           </View>
-          <ScrollView contentContainerStyle={{ padding: 24 }}>
+          <ScrollView contentContainerStyle={{ padding: 22 }}>
             <TouchableOpacity
-              className="bg-white rounded-xl px-4 py-4 mb-2 border border-cream-200"
               onPress={() => { setLinkedPrayerId(null); setShowPrayerPicker(false); }}
+              style={{ backgroundColor: Theme.card, borderRadius: Theme.radius.inner, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 8, borderWidth: 1, borderColor: Theme.cardBorder }}
             >
-              <Text style={{ fontFamily: "DMSans-Regular", fontSize: 15, color: "#8A8A8A" }}>
-                No link
-              </Text>
+              <Text style={{ fontFamily: Theme.font.sans, fontSize: 15, color: Theme.textMuted }}>No link</Text>
             </TouchableOpacity>
-            {allPrayers.map((p) => (
-              <TouchableOpacity
-                key={p.id}
-                style={{
-                  backgroundColor: linkedPrayerId === p.id ? "#1A1A1A" : "#FFFFFF",
-                  borderRadius: 12,
-                  paddingHorizontal: 16,
-                  paddingVertical: 14,
-                  marginBottom: 8,
-                  borderWidth: 1,
-                  borderColor: linkedPrayerId === p.id ? "#1A1A1A" : "#EDE5D8",
-                }}
-                onPress={() => { setLinkedPrayerId(p.id); setShowPrayerPicker(false); }}
-              >
-                <Text
-                  style={{
-                    fontFamily: "DMSans-SemiBold",
-                    fontSize: 15,
-                    color: linkedPrayerId === p.id ? "#FFFFFF" : "#1A1A1A",
-                  }}
-                  numberOfLines={1}
+            {allPrayers.map((p) => {
+              const on = linkedPrayerId === p.id;
+              return (
+                <TouchableOpacity
+                  key={p.id}
+                  onPress={() => { setLinkedPrayerId(p.id); setShowPrayerPicker(false); }}
+                  style={{ backgroundColor: on ? Theme.primary : Theme.card, borderRadius: Theme.radius.inner, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 8, borderWidth: 1, borderColor: on ? Theme.primary : Theme.cardBorder }}
                 >
-                  {p.title}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 15, color: on ? "#FFFFFF" : Theme.text }} numberOfLines={1}>{p.title}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         </View>
       ) : (
-        <ScrollView className="flex-1" keyboardShouldPersistTaps="handled">
-          {/* Title */}
+        <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
           <TextInput
-            className="px-6 bg-transparent text-charcoal-900 mb-1"
-            style={{ fontFamily: "PlayfairDisplay-SemiBold", fontSize: 22 }}
-            placeholder="Title (optional)"
-            placeholderTextColor="#8A8A8A"
-            value={title}
-            onChangeText={setTitle}
+            style={{ paddingHorizontal: 22, fontFamily: Theme.font.serif, fontSize: 24, color: Theme.text, marginBottom: 4 }}
+            placeholder="Title (optional)" placeholderTextColor={Theme.textFaint}
+            value={title} onChangeText={setTitle}
           />
-
-          {/* Body */}
           <TextInput
-            className="px-6 flex-1 bg-transparent text-charcoal-900"
-            style={{
-              fontFamily: "DMSans-Regular",
-              fontSize: 16,
-              lineHeight: 26,
-              textAlignVertical: "top",
-              minHeight: 200,
-            }}
-            placeholder="What is God doing? What are you feeling? Write freely..."
-            placeholderTextColor="#8A8A8A"
-            value={body}
-            onChangeText={setBody}
-            multiline
-            autoFocus
+            style={{ paddingHorizontal: 22, flex: 1, fontFamily: Theme.font.sans, fontSize: 16, lineHeight: 26, color: Theme.text, textAlignVertical: "top", minHeight: 220 }}
+            placeholder="What is God doing? What are you feeling? Write freely..." placeholderTextColor={Theme.textFaint}
+            value={body} onChangeText={setBody} multiline autoFocus
           />
-
-          {/* Link to prayer */}
-          <View className="mx-6 mt-4 mb-2">
+          <View style={{ marginHorizontal: 22, marginTop: 12, marginBottom: 8 }}>
             <TouchableOpacity
-              className="flex-row items-center bg-white rounded-xl px-4 py-3 border border-cream-200"
               onPress={() => setShowPrayerPicker(true)}
+              style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: Theme.card, borderRadius: Theme.radius.inner, paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1, borderColor: Theme.cardBorder }}
             >
-              <Ionicons
-                name={linkedPrayer ? "link" : "link-outline"}
-                size={18}
-                color={linkedPrayer ? "#F5B942" : "#8A8A8A"}
-              />
-              <Text
-                className="ml-3 flex-1"
-                style={{
-                  fontFamily: "DMSans-Regular",
-                  fontSize: 14,
-                  color: linkedPrayer ? "#1A1A1A" : "#8A8A8A",
-                }}
-                numberOfLines={1}
-              >
+              <Icon name="pray" size={18} color={linkedPrayer ? Theme.primary : Theme.textFaint} />
+              <Text style={{ flex: 1, fontFamily: Theme.font.sans, fontSize: 14, color: linkedPrayer ? Theme.text : Theme.textFaint }} numberOfLines={1}>
                 {linkedPrayer ? linkedPrayer.title : "Link to a prayer request (optional)"}
               </Text>
-              <Ionicons name="chevron-forward" size={16} color="#8A8A8A" />
+              <Icon name="right" size={16} color={Theme.textFaint} />
             </TouchableOpacity>
           </View>
         </ScrollView>
