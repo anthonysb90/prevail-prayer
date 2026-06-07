@@ -74,7 +74,7 @@ export default function TabLayout() {
           ),
           tabBarButton: (props) => (
             <TouchableOpacity
-              {...props}
+              {...(props as any)}
               onPress={() => router.push("/prayer/new")}
               style={{ flex: 1, alignItems: "center" }}
             />

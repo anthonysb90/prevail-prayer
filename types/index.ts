@@ -3,10 +3,14 @@
 export interface Profile {
   id: string;
   display_name: string | null;
+  phone: string | null;
+  zip_code: string | null;
   walk_with_god: string[] | null;
   theme_pref: "system" | "light" | "dark";
   prayer_streak: number;
   last_prayer_date: string | null;
+  subscription_status: "free" | "trial" | "premium" | "expired";
+  is_admin: boolean;
   created_at: string;
   updated_at: string;
 }

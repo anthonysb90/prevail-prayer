@@ -40,17 +40,15 @@ const OPTIONS = [
 type ActionId = typeof OPTIONS[number]["id"];
 
 export function SupportPromptModal() {
-  const { visible, hide } = useSupportStore();
+  const { visible, hide, interactionId } = useSupportStore();
   const { user } = useAuthStore();
 
   const handleAction = async (actionId: ActionId) => {
-    if (user) {
+    if (user && interactionId) {
       await supabase
         .from("support_interactions")
         .update({ action: actionId })
-        .eq("user_id", user.id)
-        .order("shown_at", { ascending: false })
-        .limit(1);
+        .eq("id", interactionId);
     }
 
     hide();

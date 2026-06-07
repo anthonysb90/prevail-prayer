@@ -44,13 +44,17 @@ export function useSupportPrompt() {
       }
 
       // Record the impression
-      await supabase.from("support_interactions").insert({
-        user_id: user.id,
-        action: "dismissed", // default until user acts
-        shown_at: new Date().toISOString(),
-      });
+      const { data: inserted } = await supabase
+        .from("support_interactions")
+        .insert({
+          user_id: user.id,
+          action: "dismissed", // default until user acts
+          shown_at: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
 
-      show();
+      if (inserted) show(inserted.id);
     },
     [user, show]
   );

@@ -12,7 +12,7 @@ export function useAnnouncements() {
         .not("sent_at", "is", null)
         .order("sent_at", { ascending: false });
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as Announcement[];
     },
     staleTime: 1000 * 60 * 5,
   });

@@ -5,7 +5,7 @@
  */
 
 import { Platform } from "react-native";
-import Purchases, { LOG_LEVEL } from "react-native-purchases";
+import Purchases, { LOG_LEVEL, PurchasesOffering, PurchasesPackage } from "react-native-purchases";
 
 export const ENTITLEMENT_ID = "premium";
 
@@ -40,11 +40,11 @@ export async function getSubscriptionStatus(): Promise<boolean> {
   return false;
 }
 
-export async function getOfferings(): Promise<null> {
+export async function getOfferings(): Promise<PurchasesOffering | null> {
   return null;
 }
 
-export async function purchasePackage(_pkg: any): Promise<boolean> {
+export async function purchasePackage(_pkg: PurchasesPackage): Promise<boolean> {
   return false;
 }
 

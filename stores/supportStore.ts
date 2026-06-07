@@ -2,12 +2,14 @@ import { create } from "zustand";
 
 interface SupportState {
   visible: boolean;
-  show: () => void;
+  interactionId: string | null;
+  show: (interactionId: string) => void;
   hide: () => void;
 }
 
 export const useSupportStore = create<SupportState>((set) => ({
   visible: false,
-  show: () => set({ visible: true }),
-  hide: () => set({ visible: false }),
+  interactionId: null,
+  show: (interactionId) => set({ visible: true, interactionId }),
+  hide: () => set({ visible: false, interactionId: null }),
 }));

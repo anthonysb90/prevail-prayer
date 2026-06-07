@@ -8,30 +8,58 @@ import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
 
+function formatPhone(input: string) {
+  const digits = input.replace(/\D/g, "").slice(0, 10);
+  const len = digits.length;
+  if (len === 0) return "";
+  if (len < 4) return `(${digits}`;
+  if (len < 7) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
 export default function AccountScreen() {
   const router = useRouter();
   const { user, profile, fetchProfile, signOut } = useAuthStore();
 
   const [displayName, setDisplayName] = useState(profile?.display_name ?? "");
+  const [phone, setPhone] = useState(
+    profile?.phone ? formatPhone(profile.phone) : ""
+  );
+  const [zip, setZip] = useState(profile?.zip_code ?? "");
   const [saving, setSaving] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
-  const hasChanges = displayName.trim() !== (profile?.display_name ?? "");
+  const phoneDigits = phone.replace(/\D/g, "");
+  const phoneValid = phoneDigits.length === 0 || phoneDigits.length === 10;
+  const zipValid = zip.length === 0 || zip.length === 5;
+
+  const hasChanges =
+    displayName.trim() !== (profile?.display_name ?? "") ||
+    phoneDigits !== (profile?.phone ?? "") ||
+    zip !== (profile?.zip_code ?? "");
 
   const handleSave = async () => {
     if (!user || !displayName.trim()) return;
+    if (!phoneValid || !zipValid) {
+      Alert.alert("Check your details", "Phone must be 10 digits and zip must be 5 digits.");
+      return;
+    }
     setSaving(true);
 
     const { error } = await supabase
       .from("profiles")
-      .update({ display_name: displayName.trim() })
+      .update({
+        display_name: displayName.trim(),
+        phone: phoneDigits.length === 10 ? phoneDigits : null,
+        zip_code: zip.length === 5 ? zip : null,
+      })
       .eq("id", user.id);
 
     if (error) {
       Alert.alert("Error", error.message);
     } else {
       await fetchProfile(user.id);
-      Alert.alert("Saved", "Your display name has been updated.");
+      Alert.alert("Saved", "Your profile has been updated.");
     }
     setSaving(false);
   };
@@ -111,6 +139,41 @@ export default function AccountScreen() {
               marginBottom: 16,
             }}
             placeholder="Your name"
+            placeholderTextColor="#8A8A8A"
+          />
+
+          <Text style={{ fontFamily: "DMSans-Medium", fontSize: 13, color: "#4A4A4A", marginBottom: 6 }}>
+            Phone Number
+          </Text>
+          <TextInput
+            value={phone}
+            onChangeText={(t) => setPhone(formatPhone(t))}
+            keyboardType="phone-pad"
+            style={{
+              backgroundColor: "#F5F0E8",
+              borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
+              fontFamily: "DMSans-Regular", fontSize: 16, color: "#1A1A1A",
+              marginBottom: 16,
+            }}
+            placeholder="(555) 123-4567"
+            placeholderTextColor="#8A8A8A"
+          />
+
+          <Text style={{ fontFamily: "DMSans-Medium", fontSize: 13, color: "#4A4A4A", marginBottom: 6 }}>
+            Zip Code
+          </Text>
+          <TextInput
+            value={zip}
+            onChangeText={(t) => setZip(t.replace(/\D/g, "").slice(0, 5))}
+            keyboardType="number-pad"
+            maxLength={5}
+            style={{
+              backgroundColor: "#F5F0E8",
+              borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
+              fontFamily: "DMSans-Regular", fontSize: 16, color: "#1A1A1A",
+              marginBottom: 16,
+            }}
+            placeholder="30223"
             placeholderTextColor="#8A8A8A"
           />
 

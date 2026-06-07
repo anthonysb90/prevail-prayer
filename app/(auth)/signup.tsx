@@ -20,7 +20,11 @@ export default function SignupScreen() {
     }
     setLoading(true);
 
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { display_name: displayName.trim() } },
+    });
 
     if (error) {
       Alert.alert("Sign up failed", error.message);
@@ -29,11 +33,8 @@ export default function SignupScreen() {
     }
 
     if (data.user) {
-      // Create profile
-      await supabase.from("profiles").insert({
-        id: data.user.id,
-        display_name: displayName,
-      });
+      // Profile row is auto-created by the on_auth_user_created trigger,
+      // which reads display_name from the signup metadata above.
       router.replace("/(onboarding)/walk");
     }
     setLoading(false);
