@@ -1,74 +1,95 @@
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { useAuthStore } from "@/stores/authStore";
+import { Theme } from "@/constants/theme";
+import { Icon } from "@/components/ui/Icon";
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { profile, signOut } = useAuthStore();
 
   const rows = [
-    { label: "General Reminders", icon: "notifications-outline", onPress: () => router.push("/settings/reminders") },
-    { label: "Account",           icon: "person-outline",        onPress: () => router.push("/settings/account") },
-    { label: "Theme",             icon: "moon-outline",          onPress: () => {} },
-    { label: "Rate the App",      icon: "star-outline",          onPress: () => {} },
-    { label: "Share with a Friend", icon: "share-social-outline",onPress: () => {} },
-    { label: "Support Prevail Prayer", icon: "heart-outline",    onPress: () => {} },
+    { label: "General Reminders", icon: "bell", onPress: () => router.push("/settings/reminders") },
+    { label: "Account", icon: "user", onPress: () => router.push("/settings/account") },
+    { label: "Theme", icon: "moon", onPress: () => {} },
+    { label: "Rate the App", icon: "sparkle", onPress: () => {} },
+    { label: "Share with a Friend", icon: "share", onPress: () => {} },
+    { label: "Support Prevail Prayer", icon: "heart", onPress: () => {} },
   ];
 
+  const name = profile?.display_name ?? "Friend";
+  const initial = name.trim().charAt(0).toUpperCase();
+
   return (
-    <View className="flex-1 bg-cream-100">
-      <View className="px-6 pt-16 pb-6 flex-row items-center">
-        <TouchableOpacity onPress={() => router.back()} className="mr-4">
-          <Ionicons name="arrow-back" size={22} color="#4A4A4A" />
+    <View style={{ flex: 1, backgroundColor: Theme.bg }}>
+      <View style={{ paddingHorizontal: 22, paddingTop: 62, paddingBottom: 18, flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Icon name="left" size={22} color={Theme.text} />
         </TouchableOpacity>
-        <Text style={{ fontFamily: "PlayfairDisplay-Bold", fontSize: 26 }} className="text-charcoal-900">
-          Settings
-        </Text>
+        <Text style={{ fontFamily: Theme.font.serif, fontSize: 26, color: Theme.text }}>Settings</Text>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 32 }}>
-        {/* Profile card */}
-        <View className="bg-white rounded-2xl p-5 mb-6 flex-row items-center">
-          <View className="w-12 h-12 rounded-full bg-amber-400 items-center justify-center mr-4">
-            <Text className="text-white text-xl">🙏</Text>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 36 }}>
+        {/* Profile */}
+        <View
+          style={{
+            backgroundColor: Theme.card, borderRadius: Theme.radius.card,
+            borderWidth: 1, borderColor: Theme.cardBorder,
+            padding: 18, marginBottom: 22, flexDirection: "row", alignItems: "center", gap: 14,
+            ...Theme.shadow,
+          }}
+        >
+          <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: Theme.primarySoft, alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ fontFamily: Theme.font.serif, fontSize: 22, color: Theme.primary }}>{initial}</Text>
           </View>
           <View>
-            <Text style={{ fontFamily: "DMSans-SemiBold", fontSize: 16 }} className="text-charcoal-900">
-              {profile?.display_name ?? "Friend"}
-            </Text>
-            <Text style={{ fontFamily: "DMSans-Regular", fontSize: 13 }} className="text-charcoal-400">
-              Prevail Prayer
-            </Text>
+            <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 17, color: Theme.text }}>{name}</Text>
+            <Text style={{ fontFamily: Theme.font.sans, fontSize: 13, color: Theme.textFaint, marginTop: 2 }}>Prevail Prayer</Text>
           </View>
         </View>
 
-        {/* Settings rows */}
-        <View className="bg-white rounded-2xl overflow-hidden mb-6">
+        {/* Rows */}
+        <View
+          style={{
+            backgroundColor: Theme.card, borderRadius: Theme.radius.card,
+            borderWidth: 1, borderColor: Theme.cardBorder, overflow: "hidden", marginBottom: 22,
+            ...Theme.shadow,
+          }}
+        >
           {rows.map((row, i) => (
             <TouchableOpacity
               key={row.label}
-              className={`flex-row items-center px-5 py-4 ${i < rows.length - 1 ? "border-b border-cream-200" : ""}`}
               onPress={row.onPress}
+              activeOpacity={0.7}
+              style={{
+                flexDirection: "row", alignItems: "center", gap: 14,
+                paddingHorizontal: 18, paddingVertical: 16,
+                borderTopWidth: i === 0 ? 0 : 1, borderTopColor: Theme.cardBorder,
+              }}
             >
-              <Ionicons name={row.icon as any} size={20} color="#8A8A8A" />
-              <Text style={{ fontFamily: "DMSans-Regular", fontSize: 15 }} className="text-charcoal-900 ml-4 flex-1">
-                {row.label}
-              </Text>
-              <Ionicons name="chevron-forward" size={16} color="#8A8A8A" />
+              <Icon name={row.icon} size={20} color={Theme.textMuted} />
+              <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 15, color: Theme.text, flex: 1 }}>{row.label}</Text>
+              <Icon name="right" size={16} color={Theme.textFaint} />
             </TouchableOpacity>
           ))}
         </View>
 
         {/* Sign out */}
         <TouchableOpacity
-          className="bg-white rounded-2xl py-4 items-center"
           onPress={signOut}
+          activeOpacity={0.8}
+          style={{
+            backgroundColor: Theme.card, borderRadius: Theme.radius.card,
+            borderWidth: 1, borderColor: Theme.cardBorder, paddingVertical: 16, alignItems: "center",
+            ...Theme.shadow,
+          }}
         >
-          <Text style={{ fontFamily: "DMSans-SemiBold", fontSize: 15 }} className="text-urgent">
-            Sign Out
-          </Text>
+          <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 15, color: Theme.urgent }}>Sign Out</Text>
         </TouchableOpacity>
+
+        <Text style={{ fontFamily: Theme.font.serifReg, fontSize: 13, color: Theme.textFaint, textAlign: "center", marginTop: 24 }}>
+          Prevail · v1.0 — "Continue steadfastly in prayer."
+        </Text>
       </ScrollView>
     </View>
   );

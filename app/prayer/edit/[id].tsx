@@ -4,20 +4,32 @@ import {
   ScrollView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { useCategories } from "@/hooks/useCategories";
 import { usePrayerRequest, useUpdatePrayer } from "@/hooks/usePrayers";
-import { PrayerStatus } from "@/types";
+import { PrayerStatus, PrayerRequest, Category } from "@/types";
+import { Theme } from "@/constants/theme";
+import { Icon } from "@/components/ui/Icon";
 
 const STATUS_OPTIONS: { value: PrayerStatus; label: string }[] = [
-  { value: "active",    label: "Active" },
-  { value: "ongoing",   label: "Ongoing" },
+  { value: "active", label: "Active" },
+  { value: "ongoing", label: "Ongoing" },
   { value: "completed", label: "Completed" },
 ];
 
+const inputStyle = {
+  backgroundColor: Theme.card, borderWidth: 1, borderColor: Theme.cardBorder,
+  borderRadius: Theme.radius.inner, paddingHorizontal: 16, paddingVertical: 14,
+  fontFamily: Theme.font.sans, fontSize: 16, color: Theme.text, marginBottom: 14,
+} as const;
+
+const fieldLabel = {
+  fontFamily: Theme.font.sansBold as string, fontSize: 12, color: Theme.primary,
+  textTransform: "uppercase" as const, letterSpacing: 1.5, marginBottom: 10,
+};
+
 function EditForm({ prayerId }: { prayerId: string }) {
   const router = useRouter();
-  const { data: prayer, isLoading: prayerLoading } = usePrayerRequest(prayerId);
+  const { data: prayer, isLoading: prayerLoading } = usePrayerRequest(prayerId) as { data: PrayerRequest | undefined; isLoading: boolean };
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
   const updatePrayer = useUpdatePrayer();
 
@@ -28,38 +40,24 @@ function EditForm({ prayerId }: { prayerId: string }) {
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [initialized, setInitialized] = useState(false);
 
-  // Pre-populate form once prayer data loads
   useEffect(() => {
     if (prayer && !initialized) {
       setTitle(prayer.title);
       setDescription(prayer.description ?? "");
       setIsUrgent(prayer.is_urgent);
       setStatus(prayer.status === "answered" ? "active" : prayer.status);
-      setSelectedCategoryIds(prayer.categories?.map((c) => c.id) ?? []);
+      setSelectedCategoryIds(prayer.categories?.map((c: Category) => c.id) ?? []);
       setInitialized(true);
     }
   }, [prayer, initialized]);
 
-  const toggleCategory = (id: string) => {
-    setSelectedCategoryIds((prev) =>
-      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
-    );
-  };
+  const toggleCategory = (id: string) =>
+    setSelectedCategoryIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
 
   const handleSave = async () => {
-    if (!title.trim()) {
-      Alert.alert("Please add a title.");
-      return;
-    }
+    if (!title.trim()) return Alert.alert("Please add a title.");
     try {
-      await updatePrayer.mutateAsync({
-        id: prayerId,
-        title,
-        description: description.trim() || null,
-        status,
-        is_urgent: isUrgent,
-        categoryIds: selectedCategoryIds,
-      });
+      await updatePrayer.mutateAsync({ id: prayerId, title, description: description.trim() || null, status, is_urgent: isUrgent, categoryIds: selectedCategoryIds });
       router.back();
     } catch (e: any) {
       Alert.alert("Error saving changes", e.message);
@@ -68,136 +66,86 @@ function EditForm({ prayerId }: { prayerId: string }) {
 
   if (prayerLoading || !initialized) {
     return (
-      <View className="flex-1 bg-cream-100 items-center justify-center">
-        <ActivityIndicator color="#F5B942" />
+      <View style={{ flex: 1, backgroundColor: Theme.bg, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator color={Theme.primary} />
       </View>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-cream-100"
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      {/* Header */}
-      <View className="px-6 pt-16 pb-4 flex-row items-center justify-between">
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="close" size={24} color="#4A4A4A" />
-        </TouchableOpacity>
-        <Text style={{ fontFamily: "PlayfairDisplay-Bold", fontSize: 20 }} className="text-charcoal-900">
-          Edit Prayer Request
-        </Text>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: Theme.bg }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <View style={{ paddingHorizontal: 22, paddingTop: 60, paddingBottom: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <TouchableOpacity onPress={() => router.back()}><Icon name="x" size={24} color={Theme.text} /></TouchableOpacity>
+        <Text style={{ fontFamily: Theme.font.serif, fontSize: 20, color: Theme.text }}>Edit Request</Text>
         <TouchableOpacity onPress={handleSave} disabled={updatePrayer.isPending}>
-          {updatePrayer.isPending ? (
-            <ActivityIndicator size="small" color="#F5B942" />
-          ) : (
-            <Text className="text-amber-500" style={{ fontFamily: "DMSans-SemiBold", fontSize: 16 }}>
-              Save
-            </Text>
-          )}
+          {updatePrayer.isPending ? <ActivityIndicator size="small" color={Theme.primary} />
+            : <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 16, color: title.trim() ? Theme.primary : Theme.textFaint }}>Save</Text>}
         </TouchableOpacity>
       </View>
 
-      <ScrollView className="flex-1 px-6" keyboardShouldPersistTaps="handled">
-        {/* Title */}
+      <ScrollView style={{ flex: 1, paddingHorizontal: 22 }} keyboardShouldPersistTaps="handled">
         <TextInput
-          className="bg-white border border-cream-200 rounded-xl px-4 py-4 text-charcoal-900 mb-4"
-          style={{ fontFamily: "DMSans-Regular", fontSize: 16 }}
-          placeholder="What are you praying for?"
-          placeholderTextColor="#8A8A8A"
-          value={title}
-          onChangeText={setTitle}
+          style={inputStyle as any}
+          placeholder="What are you praying for?" placeholderTextColor={Theme.textFaint}
+          value={title} onChangeText={setTitle}
+        />
+        <TextInput
+          style={[inputStyle, { minHeight: 100, textAlignVertical: "top", fontSize: 15 }] as any}
+          placeholder="Details, Scripture, or context (optional)..." placeholderTextColor={Theme.textFaint}
+          value={description} onChangeText={setDescription} multiline numberOfLines={4}
         />
 
-        {/* Description */}
-        <TextInput
-          className="bg-white border border-cream-200 rounded-xl px-4 py-4 text-charcoal-900 mb-4"
-          style={{ fontFamily: "DMSans-Regular", fontSize: 15, minHeight: 100, textAlignVertical: "top" }}
-          placeholder="Details, Scripture, or context (optional)..."
-          placeholderTextColor="#8A8A8A"
-          value={description}
-          onChangeText={setDescription}
-          multiline
-          numberOfLines={4}
-        />
-
-        {/* Urgent toggle */}
         <TouchableOpacity
-          className={`flex-row items-center rounded-xl px-4 py-4 mb-4 border ${
-            isUrgent ? "bg-red-50 border-red-200" : "bg-white border-cream-200"
-          }`}
           onPress={() => setIsUrgent(!isUrgent)}
+          style={{
+            flexDirection: "row", alignItems: "center", gap: 12,
+            backgroundColor: isUrgent ? "#FBEAEE" : Theme.card,
+            borderWidth: 1, borderColor: isUrgent ? "#F2C2CC" : Theme.cardBorder,
+            borderRadius: Theme.radius.inner, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 20,
+          }}
         >
-          <Ionicons
-            name={isUrgent ? "alert-circle" : "alert-circle-outline"}
-            size={20}
-            color={isUrgent ? "#E53E3E" : "#8A8A8A"}
-          />
-          <Text
-            className={`ml-3 text-base ${isUrgent ? "text-red-600" : "text-charcoal-600"}`}
-            style={{ fontFamily: "DMSans-Medium" }}
-          >
-            Mark as Urgent
-          </Text>
+          <Icon name="flame" size={20} color={isUrgent ? Theme.urgent : Theme.textFaint} />
+          <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 15, color: isUrgent ? Theme.urgent : Theme.textMuted }}>Mark as Urgent</Text>
         </TouchableOpacity>
 
-        {/* Status */}
-        <Text className="text-charcoal-600 text-sm mb-2" style={{ fontFamily: "DMSans-Medium" }}>
-          Status
-        </Text>
-        <View className="flex-row gap-2 mb-6 flex-wrap">
-          {STATUS_OPTIONS.map((opt) => (
-            <TouchableOpacity
-              key={opt.value}
-              className={`rounded-full py-3 px-5 border ${
-                status === opt.value
-                  ? "bg-charcoal-900 border-charcoal-900"
-                  : "bg-white border-cream-200"
-              }`}
-              onPress={() => setStatus(opt.value)}
-            >
-              <Text
-                className={status === opt.value ? "text-white" : "text-charcoal-600"}
-                style={{ fontFamily: "DMSans-Medium", fontSize: 14 }}
+        <Text style={fieldLabel}>Status</Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 22 }}>
+          {STATUS_OPTIONS.map((opt) => {
+            const on = status === opt.value;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                onPress={() => setStatus(opt.value)}
+                style={{
+                  paddingHorizontal: 20, paddingVertical: 12, borderRadius: Theme.radius.pill,
+                  backgroundColor: on ? Theme.primary : Theme.card,
+                  borderWidth: 1, borderColor: on ? Theme.primary : Theme.cardBorder,
+                }}
               >
-                {opt.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 14, color: on ? "#FFFFFF" : Theme.textMuted }}>{opt.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
-        {/* Categories */}
-        <Text className="text-charcoal-600 text-sm mb-3" style={{ fontFamily: "DMSans-Medium" }}>
-          Categories
-        </Text>
+        <Text style={fieldLabel}>Categories</Text>
         {categoriesLoading ? (
-          <ActivityIndicator color="#F5B942" style={{ marginBottom: 16 }} />
+          <ActivityIndicator color={Theme.primary} style={{ marginBottom: 16 }} />
         ) : (
-          <View className="flex-row flex-wrap gap-2 mb-10">
-            {categories.map((cat) => {
-              const isSelected = selectedCategoryIds.includes(cat.id);
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 40 }}>
+            {categories.map((cat: Category) => {
+              const on = selectedCategoryIds.includes(cat.id);
               return (
                 <TouchableOpacity
                   key={cat.id}
-                  style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 7,
-                    borderRadius: 100,
-                    backgroundColor: isSelected ? cat.color_bg : "#FFFFFF",
-                    borderWidth: 1.5,
-                    borderColor: isSelected ? cat.color_border : "#EDE5D8",
-                  }}
                   onPress={() => toggleCategory(cat.id)}
+                  style={{
+                    paddingHorizontal: 14, paddingVertical: 8, borderRadius: Theme.radius.pill,
+                    backgroundColor: on ? (cat.color_bg ?? Theme.primarySoft) : Theme.card,
+                    borderWidth: 1, borderColor: on ? (cat.color_border ?? Theme.primary) : Theme.cardBorder,
+                  }}
                 >
-                  <Text
-                    style={{
-                      fontFamily: "DMSans-Medium",
-                      fontSize: 13,
-                      color: isSelected ? cat.color_border : "#4A4A4A",
-                    }}
-                  >
-                    {cat.name}
-                  </Text>
+                  <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 13, color: on ? (cat.color_border ?? Theme.primary) : Theme.textMuted }}>{cat.name}</Text>
                 </TouchableOpacity>
               );
             })}

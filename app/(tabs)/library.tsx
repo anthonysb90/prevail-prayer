@@ -1,87 +1,62 @@
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { PremiumGate } from "@/components/ui/PremiumGate";
 import { VERSE_TOPICS } from "@/constants/verses";
 import { ScriptureTopic } from "@/types";
+import { Theme } from "@/constants/theme";
+import { Icon } from "@/components/ui/Icon";
 
 const TOPIC_ICONS: Record<ScriptureTopic, string> = {
-  Prayer: "chatbubble-ellipses-outline", Faith: "shield-outline",
-  Healing: "medkit-outline", Peace: "leaf-outline", Guidance: "compass-outline",
-  Trust: "heart-outline", Praise: "musical-notes-outline", Warfare: "flash-outline",
-  Salvation: "star-outline", Hope: "sunny-outline",
-};
-
-const TOPIC_COLORS: Record<ScriptureTopic, { bg: string; icon: string }> = {
-  Prayer:   { bg: "#E3F2FD", icon: "#2196F3" },
-  Faith:    { bg: "#FFF8E1", icon: "#FFC107" },
-  Healing:  { bg: "#FCE4EC", icon: "#E91E63" },
-  Peace:    { bg: "#E8F5E9", icon: "#4CAF50" },
-  Guidance: { bg: "#E0F7FA", icon: "#00BCD4" },
-  Trust:    { bg: "#FCE4EC", icon: "#E91E63" },
-  Praise:   { bg: "#FFF8E1", icon: "#FF9800" },
-  Warfare:  { bg: "#EDE7F6", icon: "#673AB7" },
-  Salvation:{ bg: "#FBE9E7", icon: "#FF5722" },
-  Hope:     { bg: "#FFF9C4", icon: "#F9A825" },
+  Prayer: "pray", Faith: "cross", Healing: "heart", Peace: "moon", Guidance: "search",
+  Trust: "check", Praise: "note", Warfare: "flame", Salvation: "sun", Hope: "sparkle",
 };
 
 function LibraryContent() {
   const router = useRouter();
 
   return (
-    <View className="flex-1 bg-cream-100">
-      <View className="px-6 pt-16 pb-6">
-        <Text style={{ fontFamily: "PlayfairDisplay-Bold", fontSize: 28 }} className="text-charcoal-900">
-          Scripture Library
+    <View style={{ flex: 1, backgroundColor: Theme.bg }}>
+      <View style={{ paddingHorizontal: 22, paddingTop: 62, paddingBottom: 18 }}>
+        <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 13, color: Theme.textFaint, marginBottom: 3 }}>
+          Verses for prayer · KJV
         </Text>
-        <Text className="text-charcoal-400 text-sm mt-1" style={{ fontFamily: "DMSans-Regular" }}>
-          KJV — tap a topic to read
-        </Text>
+        <Text style={{ fontFamily: Theme.font.serif, fontSize: 28, color: Theme.text }}>Scripture</Text>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 32 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 36 }}>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-          {VERSE_TOPICS.map((topic) => {
-            const colors = TOPIC_COLORS[topic];
-            return (
-              <TouchableOpacity
-                key={topic}
-                onPress={() => router.push(`/library/${encodeURIComponent(topic)}`)}
+          {VERSE_TOPICS.map((topic) => (
+            <TouchableOpacity
+              key={topic}
+              onPress={() => router.push(`/library/${encodeURIComponent(topic)}`)}
+              activeOpacity={0.85}
+              style={{
+                width: "47.5%",
+                backgroundColor: Theme.card,
+                borderRadius: Theme.radius.card,
+                borderWidth: 1,
+                borderColor: Theme.cardBorder,
+                padding: 18,
+                ...Theme.shadow,
+              }}
+            >
+              <View
                 style={{
-                  width: "47%",
-                  backgroundColor: colors.bg,
-                  borderRadius: 18,
-                  padding: 20,
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.04,
-                  shadowRadius: 3,
-                  elevation: 1,
+                  width: 44, height: 44, borderRadius: 14,
+                  backgroundColor: Theme.primarySoft,
+                  alignItems: "center", justifyContent: "center",
+                  marginBottom: 14,
                 }}
-                activeOpacity={0.8}
               >
-                <View
-                  style={{
-                    width: 44, height: 44, borderRadius: 13,
-                    backgroundColor: "rgba(255,255,255,0.6)",
-                    alignItems: "center", justifyContent: "center",
-                    marginBottom: 14,
-                  }}
-                >
-                  <Ionicons name={TOPIC_ICONS[topic] as any} size={24} color={colors.icon} />
-                </View>
-                <Text style={{ fontFamily: "PlayfairDisplay-Bold", fontSize: 18, color: "#1A1A1A" }}>
-                  {topic}
-                </Text>
-                <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6 }}>
-                  <Text style={{ fontFamily: "DMSans-Regular", fontSize: 12, color: "#4A4A4A" }}>
-                    View verses
-                  </Text>
-                  <Ionicons name="arrow-forward" size={12} color="#4A4A4A" style={{ marginLeft: 4 }} />
-                </View>
-              </TouchableOpacity>
-            );
-          })}
+                <Icon name={TOPIC_ICONS[topic]} size={22} color={Theme.primary} />
+              </View>
+              <Text style={{ fontFamily: Theme.font.serif, fontSize: 19, color: Theme.text }}>{topic}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6 }}>
+                <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 13, color: Theme.primary }}>View verses</Text>
+                <Icon name="right" size={13} color={Theme.primary} />
+              </View>
+            </TouchableOpacity>
+          ))}
         </View>
       </ScrollView>
     </View>
