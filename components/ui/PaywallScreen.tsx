@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
+import { Icon } from "@/components/ui/Icon";
 import {
   getOfferings,
   purchasePackage,
@@ -96,13 +97,13 @@ export function PaywallScreen() {
       presentationStyle="pageSheet"
       onRequestClose={hidePaywall}
     >
-      <View style={{ flex: 1, backgroundColor: "#F5F0E8" }}>
+      <View style={{ flex: 1, backgroundColor: "#F1EFF9" }}>
         {/* Dismiss */}
         <TouchableOpacity
           onPress={hidePaywall}
           style={{ alignSelf: "flex-end", padding: 20, paddingBottom: 0 }}
         >
-          <Ionicons name="close" size={24} color="#8A8A8A" />
+          <Ionicons name="close" size={24} color="#9794A4" />
         </TouchableOpacity>
 
         <ScrollView
@@ -116,20 +117,20 @@ export function PaywallScreen() {
                 width: 80,
                 height: 80,
                 borderRadius: 24,
-                backgroundColor: "#F5B942",
+                backgroundColor: "#5B53C6",
                 alignItems: "center",
                 justifyContent: "center",
                 marginBottom: 20,
               }}
             >
-              <Text style={{ fontSize: 36 }}>🙏</Text>
+              <Icon name="cross" size={36} color="#FFFFFF" />
             </View>
 
             <Text
               style={{
-                fontFamily: "PlayfairDisplay-Bold",
+                fontFamily: "Newsreader_600SemiBold",
                 fontSize: 30,
-                color: "#1A1A1A",
+                color: "#1D1B26",
                 textAlign: "center",
                 marginBottom: 8,
               }}
@@ -139,9 +140,9 @@ export function PaywallScreen() {
 
             <Text
               style={{
-                fontFamily: "DMSans-Regular",
+                fontFamily: "HankenGrotesk_400Regular",
                 fontSize: 15,
-                color: "#4A4A4A",
+                color: "#5A5666",
                 textAlign: "center",
                 lineHeight: 22,
               }}
@@ -167,7 +168,7 @@ export function PaywallScreen() {
                   alignItems: "center",
                   padding: 16,
                   borderBottomWidth: i < PREMIUM_FEATURES.length - 1 ? 1 : 0,
-                  borderBottomColor: "#EDE5D8",
+                  borderBottomColor: "#E7E5EF",
                 }}
               >
                 <View
@@ -175,36 +176,36 @@ export function PaywallScreen() {
                     width: 40,
                     height: 40,
                     borderRadius: 12,
-                    backgroundColor: "#FFF8E8",
+                    backgroundColor: "#ECEAFA",
                     alignItems: "center",
                     justifyContent: "center",
                     marginRight: 14,
                   }}
                 >
-                  <Ionicons name={feature.icon as any} size={20} color="#F5B942" />
+                  <Ionicons name={feature.icon as any} size={20} color="#5B53C6" />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text
                     style={{
-                      fontFamily: "DMSans-SemiBold",
+                      fontFamily: "HankenGrotesk_600SemiBold",
                       fontSize: 15,
-                      color: "#1A1A1A",
+                      color: "#1D1B26",
                     }}
                   >
                     {feature.title}
                   </Text>
                   <Text
                     style={{
-                      fontFamily: "DMSans-Regular",
+                      fontFamily: "HankenGrotesk_400Regular",
                       fontSize: 13,
-                      color: "#8A8A8A",
+                      color: "#9794A4",
                       marginTop: 1,
                     }}
                   >
                     {feature.description}
                   </Text>
                 </View>
-                <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+                <Ionicons name="checkmark-circle" size={20} color="#3FB27F" />
               </View>
             ))}
           </View>
@@ -212,23 +213,23 @@ export function PaywallScreen() {
           {/* Pricing */}
           <View style={{ alignItems: "center", marginBottom: 20 }}>
             {loading ? (
-              <ActivityIndicator color="#F5B942" />
+              <ActivityIndicator color="#5B53C6" />
             ) : (
               <>
                 <Text
                   style={{
-                    fontFamily: "PlayfairDisplay-Bold",
+                    fontFamily: "Newsreader_600SemiBold",
                     fontSize: 36,
-                    color: "#1A1A1A",
+                    color: "#1D1B26",
                   }}
                 >
                   $14.99
                 </Text>
                 <Text
                   style={{
-                    fontFamily: "DMSans-Regular",
+                    fontFamily: "HankenGrotesk_400Regular",
                     fontSize: 14,
-                    color: "#8A8A8A",
+                    color: "#9794A4",
                     marginTop: 2,
                   }}
                 >
@@ -243,7 +244,7 @@ export function PaywallScreen() {
             onPress={handlePurchase}
             disabled={purchasing || loading || !pkg}
             style={{
-              backgroundColor: "#F5B942",
+              backgroundColor: "#5B53C6",
               borderRadius: 100,
               paddingVertical: 18,
               alignItems: "center",
@@ -257,7 +258,7 @@ export function PaywallScreen() {
             ) : (
               <Text
                 style={{
-                  fontFamily: "DMSans-SemiBold",
+                  fontFamily: "HankenGrotesk_600SemiBold",
                   fontSize: 16,
                   color: "#FFFFFF",
                 }}
@@ -269,9 +270,9 @@ export function PaywallScreen() {
 
           <Text
             style={{
-              fontFamily: "DMSans-Regular",
+              fontFamily: "HankenGrotesk_400Regular",
               fontSize: 12,
-              color: "#8A8A8A",
+              color: "#9794A4",
               textAlign: "center",
               marginBottom: 20,
             }}
@@ -287,9 +288,9 @@ export function PaywallScreen() {
           >
             <Text
               style={{
-                fontFamily: "DMSans-Medium",
+                fontFamily: "HankenGrotesk_500Medium",
                 fontSize: 13,
-                color: "#8A8A8A",
+                color: "#9794A4",
               }}
             >
               {restoring ? "Restoring..." : "Restore Purchase"}

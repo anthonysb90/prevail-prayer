@@ -113,12 +113,6 @@ export default function RootLayout() {
     HankenGrotesk_500Medium,
     HankenGrotesk_600SemiBold,
     HankenGrotesk_700Bold,
-    // Legacy fonts — kept loaded until every screen is converted
-    "PlayfairDisplay-Bold": require("@/assets/fonts/PlayfairDisplay-Bold.ttf"),
-    "PlayfairDisplay-SemiBold": require("@/assets/fonts/PlayfairDisplay-SemiBold.ttf"),
-    "DMSans-Regular": require("@/assets/fonts/DMSans-Regular.ttf"),
-    "DMSans-Medium": require("@/assets/fonts/DMSans-Medium.ttf"),
-    "DMSans-SemiBold": require("@/assets/fonts/DMSans-SemiBold.ttf"),
   });
 
   useEffect(() => {

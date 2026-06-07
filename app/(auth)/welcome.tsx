@@ -1,69 +1,30 @@
-import { View, Text, ImageBackground, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { Theme } from "@/constants/theme";
+import { Icon } from "@/components/ui/Icon";
 
 export default function WelcomeScreen() {
   const router = useRouter();
-
   return (
-    <View className="flex-1 bg-cream-100">
+    <View style={{ flex: 1, backgroundColor: Theme.bg }}>
       <StatusBar style="dark" />
-
-      {/* Top section */}
-      <View className="flex-1 items-center justify-center px-8 pt-20">
-        {/* App icon placeholder */}
-        <View className="w-24 h-24 rounded-3xl bg-amber-400 items-center justify-center mb-8 shadow-lg">
-          <Text className="text-white text-4xl">🙏</Text>
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32, paddingTop: 80 }}>
+        <View style={{ width: 88, height: 88, borderRadius: 26, backgroundColor: Theme.primary, alignItems: "center", justifyContent: "center", marginBottom: 28, shadowColor: Theme.primary, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.35, shadowRadius: 24, elevation: 8 }}>
+          <Icon name="cross" size={38} color="#FFFFFF" />
         </View>
-
-        <Text
-          className="text-charcoal-900 text-center mb-3"
-          style={{ fontFamily: "PlayfairDisplay-Bold", fontSize: 40 }}
-        >
-          Prevail Prayer
-        </Text>
-
-        <Text
-          className="text-charcoal-600 text-center text-base leading-6 px-4"
-          style={{ fontFamily: "DMSans-Regular" }}
-        >
+        <Text style={{ fontFamily: Theme.font.serif, fontSize: 42, color: Theme.text, textAlign: "center", marginBottom: 14 }}>Prevail Prayer</Text>
+        <Text style={{ fontFamily: Theme.font.serifReg, fontSize: 17, color: Theme.textMuted, textAlign: "center", lineHeight: 26, paddingHorizontal: 8 }}>
           "The effectual fervent prayer of a righteous man availeth much."
         </Text>
-
-        <Text
-          className="text-charcoal-400 text-sm mt-2"
-          style={{ fontFamily: "DMSans-Medium" }}
-        >
-          — James 5:16
-        </Text>
+        <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 13, color: Theme.textFaint, marginTop: 10 }}>— James 5:16</Text>
       </View>
-
-      {/* Bottom buttons */}
-      <View className="px-6 pb-12 gap-3">
-        <TouchableOpacity
-          className="bg-amber-400 rounded-full py-4 items-center"
-          onPress={() => router.push("/(auth)/signup")}
-          activeOpacity={0.85}
-        >
-          <Text
-            className="text-white text-base"
-            style={{ fontFamily: "DMSans-SemiBold" }}
-          >
-            Get Started
-          </Text>
+      <View style={{ paddingHorizontal: 24, paddingBottom: 48, gap: 12 }}>
+        <TouchableOpacity onPress={() => router.push("/(auth)/signup")} activeOpacity={0.88} style={{ backgroundColor: Theme.primary, borderRadius: Theme.radius.pill, paddingVertical: 16, alignItems: "center" }}>
+          <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 16, color: "#FFFFFF" }}>Get Started</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          className="border border-cream-200 rounded-full py-4 items-center bg-white"
-          onPress={() => router.push("/(auth)/login")}
-          activeOpacity={0.85}
-        >
-          <Text
-            className="text-charcoal-900 text-base"
-            style={{ fontFamily: "DMSans-SemiBold" }}
-          >
-            I Already Have an Account
-          </Text>
+        <TouchableOpacity onPress={() => router.push("/(auth)/login")} activeOpacity={0.88} style={{ backgroundColor: Theme.card, borderWidth: 1, borderColor: Theme.cardBorder, borderRadius: Theme.radius.pill, paddingVertical: 16, alignItems: "center" }}>
+          <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 16, color: Theme.text }}>I Already Have an Account</Text>
         </TouchableOpacity>
       </View>
     </View>

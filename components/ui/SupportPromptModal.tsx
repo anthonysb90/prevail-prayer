@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSupportStore } from "@/stores/supportStore";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
+import { Icon } from "@/components/ui/Icon";
 
 const DONATION_URL = "https://prevailprayer.com/support"; // update with real link
 const APP_STORE_URL = "https://apps.apple.com/app/prevail-prayer/idYOUR_APP_ID"; // update after submission
@@ -16,24 +17,24 @@ const OPTIONS = [
     icon: "heart-outline" as const,
     label: "Support with a Donation",
     subtitle: "Help keep Prevail Prayer free & growing",
-    color: "#E53E3E",
-    bg: "#FFF5F5",
+    color: "#E0556B",
+    bg: "#FBEAEE",
   },
   {
     id: "rated",
     icon: "star-outline" as const,
     label: "Rate the App",
     subtitle: "Leave a review on the App Store",
-    color: "#F5B942",
-    bg: "#FFF8E8",
+    color: "#5B53C6",
+    bg: "#ECEAFA",
   },
   {
     id: "shared",
     icon: "share-social-outline" as const,
     label: "Share with a Friend",
     subtitle: "Invite someone to pray with Prevail",
-    color: "#4CAF50",
-    bg: "#F0FFF4",
+    color: "#3FB27F",
+    bg: "#ECF8F2",
   },
 ] as const;
 
@@ -85,7 +86,7 @@ export function SupportPromptModal() {
       >
         <View
           style={{
-            backgroundColor: "#F5F0E8",
+            backgroundColor: "#F1EFF9",
             borderTopLeftRadius: 28,
             borderTopRightRadius: 28,
             padding: 28,
@@ -98,19 +99,19 @@ export function SupportPromptModal() {
               style={{
                 width: 56, height: 56,
                 borderRadius: 18,
-                backgroundColor: "#F5B942",
+                backgroundColor: "#5B53C6",
                 alignItems: "center",
                 justifyContent: "center",
                 marginBottom: 14,
               }}
             >
-              <Text style={{ fontSize: 26 }}>🙏</Text>
+              <Icon name="cross" size={26} color="#FFFFFF" />
             </View>
             <Text
               style={{
-                fontFamily: "PlayfairDisplay-Bold",
+                fontFamily: "Newsreader_600SemiBold",
                 fontSize: 22,
-                color: "#1A1A1A",
+                color: "#1D1B26",
                 textAlign: "center",
                 marginBottom: 6,
               }}
@@ -119,9 +120,9 @@ export function SupportPromptModal() {
             </Text>
             <Text
               style={{
-                fontFamily: "DMSans-Regular",
+                fontFamily: "HankenGrotesk_400Regular",
                 fontSize: 14,
-                color: "#4A4A4A",
+                color: "#5A5666",
                 textAlign: "center",
                 lineHeight: 20,
               }}
@@ -160,25 +161,25 @@ export function SupportPromptModal() {
                 <View style={{ flex: 1 }}>
                   <Text
                     style={{
-                      fontFamily: "DMSans-SemiBold",
+                      fontFamily: "HankenGrotesk_600SemiBold",
                       fontSize: 15,
-                      color: "#1A1A1A",
+                      color: "#1D1B26",
                     }}
                   >
                     {opt.label}
                   </Text>
                   <Text
                     style={{
-                      fontFamily: "DMSans-Regular",
+                      fontFamily: "HankenGrotesk_400Regular",
                       fontSize: 12,
-                      color: "#8A8A8A",
+                      color: "#9794A4",
                       marginTop: 1,
                     }}
                   >
                     {opt.subtitle}
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={16} color="#8A8A8A" />
+                <Ionicons name="chevron-forward" size={16} color="#9794A4" />
               </TouchableOpacity>
             ))}
           </View>
@@ -187,9 +188,9 @@ export function SupportPromptModal() {
           <TouchableOpacity onPress={hide} style={{ alignItems: "center", paddingVertical: 8 }}>
             <Text
               style={{
-                fontFamily: "DMSans-Regular",
+                fontFamily: "HankenGrotesk_400Regular",
                 fontSize: 14,
-                color: "#8A8A8A",
+                color: "#9794A4",
               }}
             >
               Not now

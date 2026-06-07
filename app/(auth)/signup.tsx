@@ -5,6 +5,15 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import { Theme } from "@/constants/theme";
+import { Icon } from "@/components/ui/Icon";
+
+const input = {
+  backgroundColor: Theme.card, borderWidth: 1, borderColor: Theme.cardBorder,
+  borderRadius: Theme.radius.inner, paddingHorizontal: 16, paddingVertical: 14,
+  fontFamily: Theme.font.sans, fontSize: 16, color: Theme.text,
+} as const;
+const lbl = { fontFamily: Theme.font.sansMed as string, fontSize: 13, color: Theme.textMuted, marginBottom: 6 };
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -14,131 +23,48 @@ export default function SignupScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleSignUp = async () => {
-    if (!email || !password || !displayName) {
-      Alert.alert("Please fill in all fields.");
-      return;
-    }
+    if (!email || !password || !displayName) return Alert.alert("Please fill in all fields.");
     setLoading(true);
-
     const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { display_name: displayName.trim() } },
+      email, password, options: { data: { display_name: displayName.trim() } },
     });
-
-    if (error) {
-      Alert.alert("Sign up failed", error.message);
-      setLoading(false);
-      return;
-    }
-
-    if (data.user) {
-      // Profile row is auto-created by the on_auth_user_created trigger,
-      // which reads display_name from the signup metadata above.
-      router.replace("/(onboarding)/walk");
-    }
+    if (error) { Alert.alert("Sign up failed", error.message); setLoading(false); return; }
+    if (data.user) router.replace("/(onboarding)/walk");
     setLoading(false);
   };
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-cream-100"
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View className="flex-1 px-6 pt-16 pb-10">
-          {/* Header */}
-          <TouchableOpacity onPress={() => router.back()} className="mb-8">
-            <Text className="text-charcoal-600 text-base" style={{ fontFamily: "DMSans-Medium" }}>
-              ← Back
-            </Text>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: Theme.bg }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+        <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 60, paddingBottom: 40 }}>
+          <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 28, flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Icon name="left" size={18} color={Theme.textMuted} />
+            <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 15, color: Theme.textMuted }}>Back</Text>
           </TouchableOpacity>
+          <Text style={{ fontFamily: Theme.font.serif, fontSize: 32, color: Theme.text, marginBottom: 6 }}>Create Account</Text>
+          <Text style={{ fontFamily: Theme.font.sans, fontSize: 16, color: Theme.textMuted, marginBottom: 36 }}>Start your prayer journey today.</Text>
 
-          <Text
-            className="text-charcoal-900 mb-2"
-            style={{ fontFamily: "PlayfairDisplay-Bold", fontSize: 32 }}
-          >
-            Create Account
-          </Text>
-          <Text
-            className="text-charcoal-600 mb-10 text-base"
-            style={{ fontFamily: "DMSans-Regular" }}
-          >
-            Start your prayer journey today.
-          </Text>
-
-          {/* Fields */}
-          <View className="gap-4 mb-8">
+          <View style={{ gap: 16, marginBottom: 30 }}>
             <View>
-              <Text className="text-charcoal-600 text-sm mb-2" style={{ fontFamily: "DMSans-Medium" }}>
-                Your Name
-              </Text>
-              <TextInput
-                className="bg-white border border-cream-200 rounded-xl px-4 py-4 text-charcoal-900"
-                style={{ fontFamily: "DMSans-Regular", fontSize: 16 }}
-                placeholder="What should we call you?"
-                placeholderTextColor="#8A8A8A"
-                value={displayName}
-                onChangeText={setDisplayName}
-                autoCapitalize="words"
-              />
+              <Text style={lbl}>Your Name</Text>
+              <TextInput style={input as any} placeholder="What should we call you?" placeholderTextColor={Theme.textFaint} value={displayName} onChangeText={setDisplayName} autoCapitalize="words" />
             </View>
-
             <View>
-              <Text className="text-charcoal-600 text-sm mb-2" style={{ fontFamily: "DMSans-Medium" }}>
-                Email
-              </Text>
-              <TextInput
-                className="bg-white border border-cream-200 rounded-xl px-4 py-4 text-charcoal-900"
-                style={{ fontFamily: "DMSans-Regular", fontSize: 16 }}
-                placeholder="your@email.com"
-                placeholderTextColor="#8A8A8A"
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-              />
+              <Text style={lbl}>Email</Text>
+              <TextInput style={input as any} placeholder="your@email.com" placeholderTextColor={Theme.textFaint} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
             </View>
-
             <View>
-              <Text className="text-charcoal-600 text-sm mb-2" style={{ fontFamily: "DMSans-Medium" }}>
-                Password
-              </Text>
-              <TextInput
-                className="bg-white border border-cream-200 rounded-xl px-4 py-4 text-charcoal-900"
-                style={{ fontFamily: "DMSans-Regular", fontSize: 16 }}
-                placeholder="At least 8 characters"
-                placeholderTextColor="#8A8A8A"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-              />
+              <Text style={lbl}>Password</Text>
+              <TextInput style={input as any} placeholder="At least 8 characters" placeholderTextColor={Theme.textFaint} value={password} onChangeText={setPassword} secureTextEntry />
             </View>
           </View>
 
-          <TouchableOpacity
-            className="bg-amber-400 rounded-full py-4 items-center"
-            onPress={handleSignUp}
-            disabled={loading}
-            activeOpacity={0.85}
-          >
-            <Text className="text-white text-base" style={{ fontFamily: "DMSans-SemiBold" }}>
-              {loading ? "Creating Account..." : "Create Account"}
-            </Text>
+          <TouchableOpacity onPress={handleSignUp} disabled={loading} activeOpacity={0.88} style={{ backgroundColor: Theme.primary, borderRadius: Theme.radius.pill, paddingVertical: 16, alignItems: "center" }}>
+            <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 16, color: "#FFFFFF" }}>{loading ? "Creating Account..." : "Create Account"}</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            className="mt-4 items-center"
-            onPress={() => router.push("/(auth)/login")}
-          >
-            <Text className="text-charcoal-600 text-sm" style={{ fontFamily: "DMSans-Regular" }}>
-              Already have an account?{" "}
-              <Text className="text-amber-500" style={{ fontFamily: "DMSans-SemiBold" }}>
-                Log in
-              </Text>
+          <TouchableOpacity onPress={() => router.push("/(auth)/login")} style={{ marginTop: 18, alignItems: "center" }}>
+            <Text style={{ fontFamily: Theme.font.sans, fontSize: 14, color: Theme.textMuted }}>
+              Already have an account? <Text style={{ fontFamily: Theme.font.sansSemi, color: Theme.primary }}>Log in</Text>
             </Text>
           </TouchableOpacity>
         </View>

@@ -24,14 +24,14 @@ export function PremiumGate({
   if (isPremium) return <>{children}</>;
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#F5F0E8" }}>
+    <View style={{ flex: 1, backgroundColor: "#F1EFF9" }}>
       {/* Header */}
       <View style={{ paddingTop: 64, paddingHorizontal: 24, paddingBottom: 8 }}>
         <Text
           style={{
-            fontFamily: "PlayfairDisplay-Bold",
+            fontFamily: "Newsreader_600SemiBold",
             fontSize: 28,
-            color: "#1A1A1A",
+            color: "#1D1B26",
           }}
         >
           {feature}
@@ -57,17 +57,17 @@ export function PremiumGate({
             justifyContent: "center",
             marginBottom: 20,
             borderWidth: 1,
-            borderColor: "#EDE5D8",
+            borderColor: "#E7E5EF",
           }}
         >
-          <Ionicons name={icon as any} size={32} color="#F5B942" />
+          <Ionicons name={icon as any} size={32} color="#5B53C6" />
         </View>
 
         <Text
           style={{
-            fontFamily: "PlayfairDisplay-SemiBold",
+            fontFamily: "Newsreader_500Medium",
             fontSize: 22,
-            color: "#1A1A1A",
+            color: "#1D1B26",
             textAlign: "center",
             marginBottom: 10,
           }}
@@ -77,9 +77,9 @@ export function PremiumGate({
 
         <Text
           style={{
-            fontFamily: "DMSans-Regular",
+            fontFamily: "HankenGrotesk_400Regular",
             fontSize: 15,
-            color: "#4A4A4A",
+            color: "#5A5666",
             textAlign: "center",
             lineHeight: 22,
             marginBottom: 32,
@@ -91,7 +91,7 @@ export function PremiumGate({
         <TouchableOpacity
           onPress={showPaywall}
           style={{
-            backgroundColor: "#F5B942",
+            backgroundColor: "#5B53C6",
             borderRadius: 100,
             paddingVertical: 16,
             paddingHorizontal: 32,
@@ -101,7 +101,7 @@ export function PremiumGate({
         >
           <Text
             style={{
-              fontFamily: "DMSans-SemiBold",
+              fontFamily: "HankenGrotesk_600SemiBold",
               fontSize: 15,
               color: "#FFFFFF",
             }}
@@ -113,9 +113,9 @@ export function PremiumGate({
         <TouchableOpacity onPress={showPaywall}>
           <Text
             style={{
-              fontFamily: "DMSans-Regular",
+              fontFamily: "HankenGrotesk_400Regular",
               fontSize: 13,
-              color: "#8A8A8A",
+              color: "#9794A4",
             }}
           >
             $14.99 / year after trial. Cancel anytime.
