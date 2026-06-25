@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/images/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#F5F0E8"
+      "backgroundColor": "#5B53C6"
     },
     "ios": {
       "supportsTablet": false,
@@ -21,7 +21,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#F5F0E8"
+        "backgroundColor": "#5B53C6"
       },
       "package": "com.missionusa.prevailprayer",
       "versionCode": 1
