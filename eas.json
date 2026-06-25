@@ -7,30 +7,32 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "ios": {
-        "simulator": false,
-        "image": "latest"
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://pvcxobbqbugghlqjpmph.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2Y3hvYmJxYnVnZ2hscWpwbXBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3MTQ1NDMsImV4cCI6MjA5NjI5MDU0M30.4dUqXL-WzyqVS_C7swESYZFTAo4QYZ_t0jOL_vM8GuM",
+        "EXPO_PUBLIC_RC_IOS_KEY": "appl_EmpUHYJkmjslFZNdJRWXjtNndMb"
       },
-      "android": {
-        "buildType": "apk"
-      }
+      "ios": { "simulator": false, "image": "latest" },
+      "android": { "buildType": "apk" }
     },
     "preview": {
       "distribution": "internal",
-      "ios": {
-        "simulator": true,
-        "image": "latest"
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://pvcxobbqbugghlqjpmph.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2Y3hvYmJxYnVnZ2hscWpwbXBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3MTQ1NDMsImV4cCI6MjA5NjI5MDU0M30.4dUqXL-WzyqVS_C7swESYZFTAo4QYZ_t0jOL_vM8GuM",
+        "EXPO_PUBLIC_RC_IOS_KEY": "appl_EmpUHYJkmjslFZNdJRWXjtNndMb"
       },
-      "android": {
-        "buildType": "apk"
-      }
+      "ios": { "simulator": true, "image": "latest" },
+      "android": { "buildType": "apk" }
     },
     "production": {
       "autoIncrement": true,
-      "ios": {
-        "enterpriseProvisioning": "universal",
-        "image": "latest"
-      }
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://pvcxobbqbugghlqjpmph.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2Y3hvYmJxYnVnZ2hscWpwbXBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3MTQ1NDMsImV4cCI6MjA5NjI5MDU0M30.4dUqXL-WzyqVS_C7swESYZFTAo4QYZ_t0jOL_vM8GuM",
+        "EXPO_PUBLIC_RC_IOS_KEY": "appl_EmpUHYJkmjslFZNdJRWXjtNndMb"
+      },
+      "ios": { "enterpriseProvisioning": "universal", "image": "latest" }
     }
   },
   "submit": {
@@ -38,7 +40,7 @@
       "ios": {
         "appleId": "btwomediallc@gmail.com",
         "ascAppId": "your-app-store-connect-app-id",
-        "appleTeamId": "your-apple-team-id"
+        "appleTeamId": "74PYV567FG"
       },
       "android": {
         "serviceAccountKeyPath": "./google-service-account.json",

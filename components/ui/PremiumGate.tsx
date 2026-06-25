@@ -106,7 +106,7 @@ export function PremiumGate({
               color: "#FFFFFF",
             }}
           >
-            Start 14-Day Free Trial
+            Unlock Premium
           </Text>
         </TouchableOpacity>
 
@@ -118,7 +118,7 @@ export function PremiumGate({
               color: "#9794A4",
             }}
           >
-            $14.99 / year after trial. Cancel anytime.
+            Plans from $2.99/mo, or pay once for lifetime.
           </Text>
         </TouchableOpacity>
       </View>

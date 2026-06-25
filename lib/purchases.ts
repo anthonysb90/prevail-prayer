@@ -1,53 +1,134 @@
 /**
- * Purchases stub — react-native-purchases configured but not yet live.
- * Replace API keys via EXPO_PUBLIC_RC_IOS_KEY / EXPO_PUBLIC_RC_ANDROID_KEY
- * before App Store submission. See LAUNCH.md for RevenueCat setup instructions.
+ * RevenueCat purchases layer (live).
+ *
+ * The entitlement identifier MUST match the identifier configured in the
+ * RevenueCat dashboard exactly. In this project it is "Prevail Prayer Pro"
+ * (NOT "premium" — that mismatch would leave paying users locked out).
+ *
+ * API keys come from env:
+ *   EXPO_PUBLIC_RC_IOS_KEY      (appl_...)
+ *   EXPO_PUBLIC_RC_ANDROID_KEY  (goog_...) — set when Android ships
+ *
+ * Every call is guarded so the app still runs if the native module is
+ * unavailable (Expo Go) or keys are unset — it simply behaves as a free,
+ * non-premium user instead of crashing.
  */
 
 import { Platform } from "react-native";
-import Purchases, { LOG_LEVEL, PurchasesOffering, PurchasesPackage } from "react-native-purchases";
+import Purchases, {
+  LOG_LEVEL,
+  CustomerInfo,
+  PurchasesOffering,
+  PurchasesPackage,
+} from "react-native-purchases";
 
-export const ENTITLEMENT_ID = "premium";
+export const ENTITLEMENT_ID = "Prevail Prayer Pro";
 
 const API_KEYS = {
   ios: process.env.EXPO_PUBLIC_RC_IOS_KEY ?? "",
   android: process.env.EXPO_PUBLIC_RC_ANDROID_KEY ?? "",
 };
 
+// True once Purchases.configure() has succeeded this session. Until then,
+// every call below short-circuits to a safe "not premium" result.
+let configured = false;
+
+function currentKey(): string {
+  return Platform.OS === "ios" ? API_KEYS.ios : API_KEYS.android;
+}
+
 /**
- * Call this once after the user is authenticated.
- * Pass the Supabase user ID so RevenueCat links the customer.
+ * Call once after the user is authenticated. Passing the Supabase user ID as
+ * the RevenueCat App User ID lets the server-side webhook map a purchase back
+ * to the correct profile row, and enables cross-device restore.
  */
 export async function initializePurchases(userId: string): Promise<void> {
+  if (configured) {
+    try {
+      await Purchases.logIn(userId);
+    } catch (e) {
+      console.warn("RevenueCat logIn skipped:", e);
+    }
+    return;
+  }
+
+  const apiKey = currentKey();
+  if (!apiKey) return; // No key yet → stay in free mode.
+
   try {
-    const apiKey = Platform.OS === "ios" ? API_KEYS.ios : API_KEYS.android;
-    if (!apiKey) return; // Skip if RC keys not yet configured
-
     if (__DEV__) Purchases.setLogLevel(LOG_LEVEL.DEBUG);
-
-    Purchases.configure({
-      apiKey,
-      appUserID: userId,
-    });
+    Purchases.configure({ apiKey, appUserID: userId });
+    configured = true;
   } catch (e) {
     console.warn("RevenueCat init skipped:", e);
   }
 }
 
+/** True if the active entitlements include the premium entitlement. */
+export function isEntitled(info?: CustomerInfo | null): boolean {
+  return !!info?.entitlements.active[ENTITLEMENT_ID];
+}
+
+/** Reads current customer info and returns whether the user is premium. */
 export async function getSubscriptionStatus(): Promise<boolean> {
-  // Returns false until RevenueCat is configured.
-  // To test premium features during development, temporarily return true here.
-  return false;
+  if (!configured) return false;
+  try {
+    const info = await Purchases.getCustomerInfo();
+    return isEntitled(info);
+  } catch (e) {
+    console.warn("getSubscriptionStatus failed:", e);
+    return false;
+  }
 }
 
+/** Returns the current offering; its availablePackages drive the paywall. */
 export async function getOfferings(): Promise<PurchasesOffering | null> {
-  return null;
+  if (!configured) return null;
+  try {
+    const offerings = await Purchases.getOfferings();
+    return offerings.current ?? null;
+  } catch (e) {
+    console.warn("getOfferings failed:", e);
+    return null;
+  }
 }
 
-export async function purchasePackage(_pkg: PurchasesPackage): Promise<boolean> {
-  return false;
+/**
+ * Purchases a package. Returns true if the premium entitlement is active
+ * afterward. A user-cancelled purchase resolves to false quietly.
+ */
+export async function purchasePackage(pkg: PurchasesPackage): Promise<boolean> {
+  if (!configured) return false;
+  try {
+    const { customerInfo } = await Purchases.purchasePackage(pkg);
+    return isEntitled(customerInfo);
+  } catch (e: any) {
+    if (!e?.userCancelled) console.warn("purchasePackage failed:", e);
+    return false;
+  }
 }
 
+/** Restores prior purchases. Returns true if premium is active afterward. */
 export async function restorePurchases(): Promise<boolean> {
-  return false;
+  if (!configured) return false;
+  try {
+    const info = await Purchases.restorePurchases();
+    return isEntitled(info);
+  } catch (e) {
+    console.warn("restorePurchases failed:", e);
+    return false;
+  }
+}
+
+/**
+ * Subscribe to live entitlement changes (renewals, expirations, restores on
+ * another device). Returns an unsubscribe function. No-op until configured.
+ */
+export function onCustomerInfoUpdate(
+  cb: (isPremium: boolean) => void
+): () => void {
+  if (!configured) return () => {};
+  const listener = (info: CustomerInfo) => cb(isEntitled(info));
+  Purchases.addCustomerInfoUpdateListener(listener);
+  return () => Purchases.removeCustomerInfoUpdateListener(listener);
 }
