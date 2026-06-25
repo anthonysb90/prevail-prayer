@@ -16,6 +16,7 @@ import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { PaywallScreen } from "@/components/ui/PaywallScreen";
 import { registerPushToken } from "@/lib/notifications";
 import { SupportPromptModal } from "@/components/ui/SupportPromptModal";
+import { TrialWelcomeModal } from "@/components/ui/TrialWelcomeModal";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -129,6 +130,7 @@ export default function RootLayout() {
       <AuthGuard />
       <PaywallScreen />
       <SupportPromptModal />
+      <TrialWelcomeModal />
     </QueryClientProvider>
   );
 }

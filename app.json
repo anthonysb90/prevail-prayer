@@ -1,6 +1,6 @@
 {
   "expo": {
-    "owner": "anthonysb90",
+    "owner": "btwollc",
     "name": "Prevail Prayer",
     "slug": "prevail-prayer",
     "version": "1.0.0",
@@ -53,7 +53,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "2739b97c-32df-4708-a794-e81e8b17e691"
+        "projectId": "2f3c446e-1398-4351-a29f-2047ea04b9d7"
       }
     }
   }
