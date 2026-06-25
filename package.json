@@ -43,6 +43,7 @@
     "@expo-google-fonts/hanken-grotesk": "^0.4.3",
     "@expo-google-fonts/newsreader": "^0.4.1",
     "@types/react": "~19.1.0",
+    "babel-preset-expo": "~54.0.5",
     "typescript": "~5.3.3"
   },
   "private": true
