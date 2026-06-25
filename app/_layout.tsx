@@ -11,6 +11,7 @@ import { StatusBar } from "expo-status-bar";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
 import { initializePurchases, getSubscriptionStatus } from "@/lib/purchases";
+import { isTrialActive } from "@/lib/trial";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { PaywallScreen } from "@/components/ui/PaywallScreen";
 import { registerPushToken } from "@/lib/notifications";
@@ -65,7 +66,7 @@ function AuthGuard() {
           // Initialize RevenueCat
           await initializePurchases(session.user.id);
           const premium = await getSubscriptionStatus();
-          setIsPremium(premium);
+          setIsPremium(premium || isTrialActive(useAuthStore.getState().profile));
           // Register push token — saves to Supabase so admin panel can send notifications
           await registerPushToken(session.user.id);
           setIsLoading(false);
@@ -81,7 +82,7 @@ function AuthGuard() {
         await fetchProfile(session.user.id);
         await initializePurchases(session.user.id);
         const premium = await getSubscriptionStatus();
-        setIsPremium(premium);
+        setIsPremium(premium || isTrialActive(useAuthStore.getState().profile));
         await registerPushToken(session.user.id);
       }
       setIsLoading(false);
