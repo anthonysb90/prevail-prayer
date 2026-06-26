@@ -27,6 +27,25 @@ const BELL_OPTIONS: { id: BellInterval; label: string }[] = [
   { id: "off", label: "Off" }, { id: "5min", label: "Every 5 min" },
   { id: "10min", label: "Every 10 min" }, { id: "end-only", label: "At End" },
 ];
+
+type Guidance = "off" | "acts" | "scripture";
+const GUIDANCE_OPTIONS: { id: Guidance; label: string }[] = [
+  { id: "off", label: "None" }, { id: "acts", label: "ACTS" }, { id: "scripture", label: "Scripture" },
+];
+const ACTS = [
+  { name: "Adoration", prompt: "Praise God for who He is — His holiness, power, and love. Worship before you ask.", verse: "\u201cHoly, holy, holy, is the LORD of hosts.\u201d \u2014 Isaiah 6:3" },
+  { name: "Confession", prompt: "Bring your sins honestly before God. Agree with Him, and receive His mercy.", verse: "\u201cIf we confess our sins, he is faithful and just to forgive us.\u201d \u2014 1 John 1:9" },
+  { name: "Thanksgiving", prompt: "Thank God for His gifts, His answers, and His daily faithfulness to you.", verse: "\u201cIn every thing give thanks.\u201d \u2014 1 Thessalonians 5:18" },
+  { name: "Supplication", prompt: "Bring your requests and the needs of others before the Lord.", verse: "\u201cLet your requests be made known unto God.\u201d \u2014 Philippians 4:6" },
+];
+const SCRIPTURE_PROMPTS = [
+  "\u201cBe still, and know that I am God.\u201d \u2014 Psalm 46:10",
+  "\u201cThe LORD is my shepherd; I shall not want.\u201d \u2014 Psalm 23:1",
+  "\u201cCast all your care upon him; for he careth for you.\u201d \u2014 1 Peter 5:7",
+  "\u201cTrust in the LORD with all thine heart.\u201d \u2014 Proverbs 3:5",
+  "\u201cMy grace is sufficient for thee.\u201d \u2014 2 Corinthians 12:9",
+  "\u201cThey that wait upon the LORD shall renew their strength.\u201d \u2014 Isaiah 40:31",
+];
 function formatTime(seconds: number) {
   const m = Math.floor(seconds / 60).toString().padStart(2, "0");
   const s = (seconds % 60).toString().padStart(2, "0");
@@ -49,6 +68,7 @@ function TimerContent() {
   const [duration, setDuration] = useState(300);
   const [track, setTrack] = useState<AmbientTrack>("morning-still");
   const [bellInterval, setBellInterval] = useState<BellInterval>("end-only");
+  const [guidance, setGuidance] = useState<Guidance>("off");
   const [running, setRunning] = useState(false);
   const [remaining, setRemaining] = useState(300);
   const [completed, setCompleted] = useState(false);
@@ -79,7 +99,7 @@ function TimerContent() {
       const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000);
       const sessionCount = await logPrayerSession(user.id, elapsed, track);
       await updatePrayerStreak(user.id);
-      analytics.capture("prayer_session_completed", { duration_seconds: elapsed, track, bell: bellInterval });
+      analytics.capture("prayer_session_completed", { duration_seconds: elapsed, track, bell: bellInterval, guidance });
       qc.invalidateQueries({ queryKey: ["prayer_requests", user.id, "counts"] });
       await checkAndShow("session_completed", sessionCount);
     } catch {}
@@ -104,6 +124,10 @@ function TimerContent() {
     padding: 16, marginBottom: 8,
   });
 
+  const elapsed = Math.max(0, duration - remaining);
+  const actsIdx = Math.min(ACTS.length - 1, Math.floor((elapsed / Math.max(1, duration)) * ACTS.length));
+  const scrIdx = Math.min(SCRIPTURE_PROMPTS.length - 1, Math.floor((elapsed / Math.max(1, duration)) * SCRIPTURE_PROMPTS.length));
+
   return (
     <View style={{ flex: 1, backgroundColor: Theme.dark }}>
       <StatusBar style="light" />
@@ -125,7 +149,22 @@ function TimerContent() {
         ) : (
           <>
             <Text style={{ color: Theme.darkText, fontFamily: Theme.font.serif, fontSize: 72, letterSpacing: -1 }}>{formatTime(remaining)}</Text>
-            <Text style={{ color: Theme.darkMuted, fontFamily: Theme.font.sans, fontSize: 14, marginTop: 8 }}>{running ? "Praying..." : "Ready to pray"}</Text>
+            {running && guidance === "acts" ? (
+              <View style={{ alignItems: "center", marginTop: 16, paddingHorizontal: 30 }}>
+                <Text style={{ color: Theme.accentOnDark, fontFamily: Theme.font.sansBold, fontSize: 13, letterSpacing: 1.5, textTransform: "uppercase" }}>
+                  {ACTS[actsIdx].name} · {actsIdx + 1} of 4
+                </Text>
+                <Text style={{ color: Theme.darkText, fontFamily: Theme.font.sans, fontSize: 16, lineHeight: 24, textAlign: "center", marginTop: 10 }}>{ACTS[actsIdx].prompt}</Text>
+                <Text style={{ color: Theme.darkMuted, fontFamily: Theme.font.serifReg, fontStyle: "italic", fontSize: 14, lineHeight: 21, textAlign: "center", marginTop: 12 }}>{ACTS[actsIdx].verse}</Text>
+              </View>
+            ) : running && guidance === "scripture" ? (
+              <View style={{ alignItems: "center", marginTop: 16, paddingHorizontal: 30 }}>
+                <Text style={{ color: Theme.accentOnDark, fontFamily: Theme.font.sansBold, fontSize: 13, letterSpacing: 1.5, textTransform: "uppercase" }}>Meditate</Text>
+                <Text style={{ color: Theme.darkText, fontFamily: Theme.font.serifReg, fontStyle: "italic", fontSize: 19, lineHeight: 28, textAlign: "center", marginTop: 12 }}>{SCRIPTURE_PROMPTS[scrIdx]}</Text>
+              </View>
+            ) : (
+              <Text style={{ color: Theme.darkMuted, fontFamily: Theme.font.sans, fontSize: 14, marginTop: 8 }}>{running ? "Praying..." : "Ready to pray"}</Text>
+            )}
           </>
         )}
       </View>
@@ -162,6 +201,22 @@ function TimerContent() {
             {bellInterval === b.id && <Icon name="check" size={18} color={Theme.accentOnDark} />}
           </TouchableOpacity>
         ))}
+
+        <Text style={[label, { marginTop: 8 }]}>Guided Prayer</Text>
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: 6 }}>
+          {GUIDANCE_OPTIONS.map((g) => {
+            const on = guidance === g.id;
+            return (
+              <TouchableOpacity key={g.id} onPress={() => setGuidance(g.id)}
+                style={{ flex: 1, paddingVertical: 12, borderRadius: Theme.radius.inner, alignItems: "center", backgroundColor: on ? Theme.primary : Theme.darkSurface, borderWidth: 1, borderColor: on ? Theme.accentOnDark : Theme.darkBorder }}>
+                <Text style={{ color: on ? "#FFFFFF" : Theme.darkMuted, fontFamily: Theme.font.sansMed, fontSize: 14 }}>{g.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <Text style={{ color: Theme.darkMuted, fontFamily: Theme.font.sans, fontSize: 12, lineHeight: 18 }}>
+          ACTS guides you through Adoration, Confession, Thanksgiving, and Supplication. Scripture cycles verses to meditate on. Prompts advance automatically as you pray.
+        </Text>
       </ScrollView>
 
       <View style={{ paddingHorizontal: 22, paddingBottom: 44 }}>

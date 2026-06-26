@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { useTheme } from "@/hooks/useTheme";
 import { AppTheme } from "@/constants/theme";
 import { Icon } from "@/components/ui/Icon";
+import { signInWithApple, signInWithGoogle } from "@/lib/socialAuth";
 
 const mkInput = (Theme: AppTheme) => ({
   backgroundColor: Theme.card, borderWidth: 1, borderColor: Theme.cardBorder,
@@ -32,6 +33,8 @@ export default function LoginScreen() {
     if (error) Alert.alert("Login failed", error.message);
     setLoading(false);
   };
+  const handleApple = async () => { try { await signInWithApple(); } catch (e: any) { if (e?.code !== "ERR_REQUEST_CANCELED") Alert.alert("Apple Sign In", e?.message ?? "Could not sign in."); } };
+  const handleGoogle = async () => { try { await signInWithGoogle(); } catch (e: any) { Alert.alert("Google Sign In", e?.message ?? "Could not sign in."); } };
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: Theme.bg }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
@@ -57,6 +60,23 @@ export default function LoginScreen() {
 
           <TouchableOpacity onPress={handleLogin} disabled={loading} activeOpacity={0.88} style={{ backgroundColor: Theme.primary, borderRadius: Theme.radius.pill, paddingVertical: 16, alignItems: "center" }}>
             <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 16, color: "#FFFFFF" }}>{loading ? "Logging in..." : "Log In"}</Text>
+          </TouchableOpacity>
+
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginVertical: 22 }}>
+            <View style={{ flex: 1, height: 1, backgroundColor: Theme.cardBorder }} />
+            <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 13, color: Theme.textFaint }}>or continue with</Text>
+            <View style={{ flex: 1, height: 1, backgroundColor: Theme.cardBorder }} />
+          </View>
+
+          {Platform.OS === "ios" && (
+            <TouchableOpacity onPress={handleApple} activeOpacity={0.85} style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: "#000000", borderRadius: Theme.radius.pill, paddingVertical: 15, marginBottom: 12 }}>
+              <Icon name="apple" size={18} color="#FFFFFF" />
+              <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 16, color: "#FFFFFF" }}>Continue with Apple</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={handleGoogle} activeOpacity={0.85} style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: Theme.card, borderWidth: 1, borderColor: Theme.cardBorder, borderRadius: Theme.radius.pill, paddingVertical: 15 }}>
+            <Text style={{ fontFamily: Theme.font.sansBold, fontSize: 18, color: "#4285F4" }}>G</Text>
+            <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 16, color: Theme.text }}>Continue with Google</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push("/(auth)/forgot")} style={{ marginTop: 16, alignItems: "center" }}>
             <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 14, color: Theme.primary }}>Forgot password?</Text>

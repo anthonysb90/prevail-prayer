@@ -210,7 +210,7 @@ export default function HomeScreen() {
       {/* Answered Prayers */}
       {answered.length > 0 && (
         <View style={{ marginHorizontal: 22 }}>
-          <SectionHeader title="Answered Prayers" count={answered.length} onAll={() => router.push("/(tabs)/pray")} />
+          <SectionHeader title="Answered Prayers" count={answered.length} onAll={() => router.push("/testimonies")} />
           {answered.slice(0, 2).map((p: PrayerRequest) => <PrayerCard key={p.id} prayer={p} compact />)}
         </View>
       )}

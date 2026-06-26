@@ -1,6 +1,9 @@
 import { useEffect, useRef } from "react";
 import { Slot, useRouter, useSegments } from "expo-router";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFonts } from "expo-font";
 import { Newsreader_400Regular, Newsreader_500Medium, Newsreader_600SemiBold } from "@expo-google-fonts/newsreader";
 import { HankenGrotesk_400Regular, HankenGrotesk_500Medium, HankenGrotesk_600SemiBold, HankenGrotesk_700Bold } from "@expo-google-fonts/hanken-grotesk";
@@ -20,14 +23,22 @@ import { PaywallScreen } from "@/components/ui/PaywallScreen";
 import { registerPushToken } from "@/lib/notifications";
 import { SupportPromptModal } from "@/components/ui/SupportPromptModal";
 import { TrialWelcomeModal } from "@/components/ui/TrialWelcomeModal";
+import { PhonePromptModal } from "@/components/ui/PhonePromptModal";
 
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 1000 * 60 * 5 },
+    queries: {
+      staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 60 * 24, // keep cached data 24h so reads work offline
+      retry: 2,
+    },
   },
 });
+
+// Persist the query cache to AsyncStorage for offline-first reads.
+const asyncPersister = createAsyncStoragePersister({ storage: AsyncStorage });
 
 function AuthGuard() {
   const { session, isLoading, setSession, fetchProfile } = useAuthStore();
@@ -170,13 +181,14 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: asyncPersister, maxAge: 1000 * 60 * 60 * 24 }}>
       <ThemedStatusBar />
       <AuthGuard />
       <PaywallScreen />
       <SupportPromptModal />
       <TrialWelcomeModal />
+      <PhonePromptModal />
       <LockGate />
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }

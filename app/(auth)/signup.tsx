@@ -17,38 +17,20 @@ const mkInput = (Theme: AppTheme) => ({
 } as const);
 const mkLbl = (Theme: AppTheme) => ({ fontFamily: Theme.font.sansMed as string, fontSize: 13, color: Theme.textMuted, marginBottom: 6 });
 
-function formatPhone(value: string) {
-  const d = value.replace(/\D/g, "").slice(0, 10);
-  if (d.length === 0) return "";
-  if (d.length < 4) return `(${d}`;
-  if (d.length < 7) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
-  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
-}
-
 export default function SignupScreen() {
-    const Theme = useTheme();
-    const input = mkInput(Theme);
-    const lbl = mkLbl(Theme);
+  const Theme = useTheme();
+  const input = mkInput(Theme);
+  const lbl = mkLbl(Theme);
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [zip, setZip] = useState("");
   const [loading, setLoading] = useState(false);
   const [confirmSent, setConfirmSent] = useState(false);
-
-  const phoneDigits = phone.replace(/\D/g, "");
 
   const handleSignUp = async () => {
     if (!displayName.trim() || !email || !password) {
       return Alert.alert("Please fill in all fields.");
-    }
-    if (phoneDigits.length !== 10) {
-      return Alert.alert("Phone number", "Please enter a valid 10-digit phone number.");
-    }
-    if (zip.length !== 5) {
-      return Alert.alert("Zip code", "Please enter a valid 5-digit zip code.");
     }
     if (password.length < 8) {
       return Alert.alert("Password", "Password must be at least 8 characters.");
@@ -57,22 +39,13 @@ export default function SignupScreen() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: {
-          display_name: displayName.trim(),
-          phone: phoneDigits,
-          zip_code: zip,
-        },
-      },
+      options: { data: { display_name: displayName.trim() } },
     });
     if (error) {
       Alert.alert("Sign up failed", error.message);
       setLoading(false);
       return;
     }
-    // If email confirmation is required, there is no session yet — show a
-    // "check your email" message. If confirmation is off, a session exists
-    // and the auth guard will route into onboarding automatically.
     analytics.capture("user_signed_up", { needs_email_confirm: !data.session });
     if (data.session) {
       router.replace("/(onboarding)/walk");
@@ -122,14 +95,6 @@ export default function SignupScreen() {
             <View>
               <Text style={lbl}>Email</Text>
               <TextInput style={input as any} placeholder="your@email.com" placeholderTextColor={Theme.textFaint} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
-            </View>
-            <View>
-              <Text style={lbl}>Phone Number</Text>
-              <TextInput style={input as any} placeholder="(555) 123-4567" placeholderTextColor={Theme.textFaint} value={phone} onChangeText={(t) => setPhone(formatPhone(t))} keyboardType="phone-pad" />
-            </View>
-            <View>
-              <Text style={lbl}>Zip Code</Text>
-              <TextInput style={input as any} placeholder="30223" placeholderTextColor={Theme.textFaint} value={zip} onChangeText={(t) => setZip(t.replace(/\D/g, "").slice(0, 5))} keyboardType="number-pad" maxLength={5} />
             </View>
             <View>
               <Text style={lbl}>Password</Text>

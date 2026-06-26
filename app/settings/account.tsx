@@ -8,6 +8,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
 import { pickAndUploadAvatar } from "@/lib/avatar";
+import { useTheme } from "@/hooks/useTheme";
+import { exportMyData } from "@/lib/exportData";
 
 function formatPhone(input: string) {
   const digits = input.replace(/\D/g, "").slice(0, 10);
@@ -19,50 +21,36 @@ function formatPhone(input: string) {
 }
 
 export default function AccountScreen() {
+  const Theme = useTheme();
   const router = useRouter();
   const { user, profile, fetchProfile, signOut } = useAuthStore();
 
   const [displayName, setDisplayName] = useState(profile?.display_name ?? "");
-  const [phone, setPhone] = useState(
-    profile?.phone ? formatPhone(profile.phone) : ""
-  );
-  const [zip, setZip] = useState(profile?.zip_code ?? "");
+  const [phone, setPhone] = useState(profile?.phone ? formatPhone(profile.phone) : "");
   const [saving, setSaving] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const phoneDigits = phone.replace(/\D/g, "");
   const phoneValid = phoneDigits.length === 0 || phoneDigits.length === 10;
-  const zipValid = zip.length === 0 || zip.length === 5;
-
   const hasChanges =
     displayName.trim() !== (profile?.display_name ?? "") ||
-    phoneDigits !== (profile?.phone ?? "") ||
-    zip !== (profile?.zip_code ?? "");
+    phoneDigits !== (profile?.phone ?? "");
+
+  const cardStyle = { backgroundColor: Theme.card, borderRadius: 20, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: Theme.cardBorder } as const;
+  const fieldStyle = { backgroundColor: Theme.bg, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontFamily: Theme.font.sans, fontSize: 16, color: Theme.text, marginBottom: 16 } as const;
+  const labelStyle = { fontFamily: Theme.font.sansMed, fontSize: 13, color: Theme.textMuted, marginBottom: 6 } as const;
 
   const handleSave = async () => {
     if (!user || !displayName.trim()) return;
-    if (!phoneValid || !zipValid) {
-      Alert.alert("Check your details", "Phone must be 10 digits and zip must be 5 digits.");
-      return;
-    }
+    if (!phoneValid) { Alert.alert("Check your details", "Phone must be 10 digits."); return; }
     setSaving(true);
-
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        display_name: displayName.trim(),
-        phone: phoneDigits.length === 10 ? phoneDigits : null,
-        zip_code: zip.length === 5 ? zip : null,
-      })
-      .eq("id", user.id);
-
-    if (error) {
-      Alert.alert("Error", error.message);
-    } else {
-      await fetchProfile(user.id);
-      Alert.alert("Saved", "Your profile has been updated.");
-    }
+    const { error } = await supabase.from("profiles").update({
+      display_name: displayName.trim(),
+      phone: phoneDigits.length === 10 ? phoneDigits : null,
+    }).eq("id", user.id);
+    if (error) Alert.alert("Error", error.message);
+    else { await fetchProfile(user.id); Alert.alert("Saved", "Your profile has been updated."); }
     setSaving(false);
   };
 
@@ -71,26 +59,36 @@ export default function AccountScreen() {
     setUploadingAvatar(true);
     try {
       const url = await pickAndUploadAvatar(user.id);
-      if (url) {
-        await fetchProfile(user.id);
-      }
-    } catch (e: any) {
-      Alert.alert("Could not update photo", e.message ?? "Please try again.");
-    }
+      if (url) await fetchProfile(user.id);
+    } catch (e: any) { Alert.alert("Could not update photo", e.message ?? "Please try again."); }
     setUploadingAvatar(false);
   };
 
-  const handleSignOut = async () => {
+  const handleExport = async () => {
+    setExporting(true);
+    try { await exportMyData(user!.id, displayName || "Friend"); }
+    catch (e: any) { Alert.alert("Export failed", e.message ?? "Please try again."); }
+    setExporting(false);
+  };
+
+  const handleSignOut = () => {
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Sign Out", style: "destructive", onPress: async () => { await signOut(); } },
+    ]);
+  };
+
+  const handleCloseAccount = () => {
     Alert.alert(
-      "Sign Out",
-      "Are you sure you want to sign out?",
+      "Close Account",
+      "Your account will be closed and you'll be signed out. We keep your email and records on file for ministry follow-up; you can reopen by contacting support. Export your data first if you'd like a copy.",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Sign Out",
-          style: "destructive",
+          text: "Close Account", style: "destructive",
           onPress: async () => {
-            setSigningOut(true);
+            if (!user) return;
+            await supabase.from("profiles").update({ deactivated_at: new Date().toISOString() }).eq("id", user.id);
             await signOut();
           },
         },
@@ -98,211 +96,90 @@ export default function AccountScreen() {
     );
   };
 
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      "Delete Account",
-      "This will permanently delete your account and all your prayer data. This cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete My Account",
-          style: "destructive",
-          onPress: () =>
-            Alert.alert(
-              "Contact Support",
-              "To delete your account, email support@prevailprayer.com with your registered email address."
-            ),
-        },
-      ]
-    );
-  };
-
   return (
-    <View style={{ flex: 1, backgroundColor: "#F1EFF9" }}>
-      {/* Header */}
-      <View style={{
-        paddingTop: 64, paddingHorizontal: 24, paddingBottom: 16,
-        flexDirection: "row", alignItems: "center",
-      }}>
+    <View style={{ flex: 1, backgroundColor: Theme.bg }}>
+      <View style={{ paddingTop: 64, paddingHorizontal: 24, paddingBottom: 16, flexDirection: "row", alignItems: "center" }}>
         <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
-          <Ionicons name="arrow-back" size={22} color="#5A5666" />
+          <Ionicons name="arrow-back" size={22} color={Theme.textMuted} />
         </TouchableOpacity>
-        <Text style={{ fontFamily: "Newsreader_600SemiBold", fontSize: 26, color: "#1D1B26" }}>
-          Account
-        </Text>
+        <Text style={{ fontFamily: Theme.font.serif, fontSize: 26, color: Theme.text }}>Account</Text>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 48 }}>
-        {/* Profile section */}
-        <View style={{ backgroundColor: "#FFFFFF", borderRadius: 20, padding: 20, marginBottom: 20 }}>
-          <Text style={{
-            fontFamily: "HankenGrotesk_500Medium", fontSize: 11, color: "#9794A4",
-            textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 16,
-          }}>
-            Profile
-          </Text>
-
-          {/* Avatar */}
+        {/* Profile */}
+        <View style={cardStyle}>
+          <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 11, color: Theme.textFaint, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 16 }}>Profile</Text>
           <View style={{ alignItems: "center", marginBottom: 18 }}>
             <TouchableOpacity onPress={handleChangeAvatar} activeOpacity={0.8} disabled={uploadingAvatar}>
               {profile?.avatar_url ? (
-                <Image
-                  source={{ uri: profile.avatar_url }}
-                  style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: "#ECEAFA" }}
-                />
+                <Image source={{ uri: profile.avatar_url }} style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: Theme.primarySoft }} />
               ) : (
-                <View style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: "#ECEAFA", alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ fontFamily: "Newsreader_600SemiBold", fontSize: 34, color: "#5B53C6" }}>
-                    {(displayName.trim().charAt(0) || "?").toUpperCase()}
-                  </Text>
+                <View style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: Theme.primarySoft, alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ fontFamily: Theme.font.serif, fontSize: 34, color: Theme.primary }}>{(displayName.trim().charAt(0) || "?").toUpperCase()}</Text>
                 </View>
               )}
-              <View style={{ position: "absolute", bottom: 0, right: 0, width: 30, height: 30, borderRadius: 15, backgroundColor: "#5B53C6", alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "#FFFFFF" }}>
+              <View style={{ position: "absolute", bottom: 0, right: 0, width: 30, height: 30, borderRadius: 15, backgroundColor: Theme.primary, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: Theme.card }}>
                 <Ionicons name="camera" size={15} color="#FFFFFF" />
               </View>
             </TouchableOpacity>
             <TouchableOpacity onPress={handleChangeAvatar} disabled={uploadingAvatar} style={{ marginTop: 10 }}>
-              <Text style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 13, color: "#5B53C6" }}>
-                {uploadingAvatar ? "Uploading..." : profile?.avatar_url ? "Change Photo" : "Add Photo"}
-              </Text>
+              <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 13, color: Theme.primary }}>{uploadingAvatar ? "Uploading..." : profile?.avatar_url ? "Change Photo" : "Add Photo"}</Text>
             </TouchableOpacity>
           </View>
 
-          <Text style={{ fontFamily: "HankenGrotesk_500Medium", fontSize: 13, color: "#5A5666", marginBottom: 6 }}>
-            Display Name
-          </Text>
-          <TextInput
-            value={displayName}
-            onChangeText={setDisplayName}
-            style={{
-              backgroundColor: "#F1EFF9",
-              borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
-              fontFamily: "HankenGrotesk_400Regular", fontSize: 16, color: "#1D1B26",
-              marginBottom: 16,
-            }}
-            placeholder="Your name"
-            placeholderTextColor="#9794A4"
-          />
+          <Text style={labelStyle}>Display Name</Text>
+          <TextInput value={displayName} onChangeText={setDisplayName} style={fieldStyle} placeholder="Your name" placeholderTextColor={Theme.textFaint} />
 
-          <Text style={{ fontFamily: "HankenGrotesk_500Medium", fontSize: 13, color: "#5A5666", marginBottom: 6 }}>
-            Phone Number
-          </Text>
-          <TextInput
-            value={phone}
-            onChangeText={(t) => setPhone(formatPhone(t))}
-            keyboardType="phone-pad"
-            style={{
-              backgroundColor: "#F1EFF9",
-              borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
-              fontFamily: "HankenGrotesk_400Regular", fontSize: 16, color: "#1D1B26",
-              marginBottom: 16,
-            }}
-            placeholder="(555) 123-4567"
-            placeholderTextColor="#9794A4"
-          />
+          <Text style={labelStyle}>Phone Number</Text>
+          <TextInput value={phone} onChangeText={(t) => setPhone(formatPhone(t))} keyboardType="phone-pad" style={fieldStyle} placeholder="(555) 123-4567" placeholderTextColor={Theme.textFaint} />
 
-          <Text style={{ fontFamily: "HankenGrotesk_500Medium", fontSize: 13, color: "#5A5666", marginBottom: 6 }}>
-            Zip Code
-          </Text>
-          <TextInput
-            value={zip}
-            onChangeText={(t) => setZip(t.replace(/\D/g, "").slice(0, 5))}
-            keyboardType="number-pad"
-            maxLength={5}
-            style={{
-              backgroundColor: "#F1EFF9",
-              borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
-              fontFamily: "HankenGrotesk_400Regular", fontSize: 16, color: "#1D1B26",
-              marginBottom: 16,
-            }}
-            placeholder="30223"
-            placeholderTextColor="#9794A4"
-          />
-
-          <Text style={{ fontFamily: "HankenGrotesk_500Medium", fontSize: 13, color: "#5A5666", marginBottom: 6 }}>
-            Email
-          </Text>
-          <View style={{
-            backgroundColor: "#F1EFF9", borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
-          }}>
-            <Text style={{ fontFamily: "HankenGrotesk_400Regular", fontSize: 16, color: "#9794A4" }}>
-              {user?.email ?? "—"}
-            </Text>
+          <Text style={labelStyle}>Email</Text>
+          <View style={{ backgroundColor: Theme.bg, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14 }}>
+            <Text style={{ fontFamily: Theme.font.sans, fontSize: 16, color: Theme.textFaint }}>{user?.email ?? "—"}</Text>
           </View>
         </View>
 
-        {/* Save button */}
         {hasChanges && (
-          <TouchableOpacity
-            onPress={handleSave}
-            disabled={saving}
-            style={{
-              backgroundColor: "#5B53C6", borderRadius: 100, paddingVertical: 16,
-              alignItems: "center", marginBottom: 20,
-            }}
-          >
-            {saving ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 16, color: "#FFFFFF" }}>
-                Save Changes
-              </Text>
-            )}
+          <TouchableOpacity onPress={handleSave} disabled={saving} style={{ backgroundColor: Theme.primary, borderRadius: 100, paddingVertical: 16, alignItems: "center", marginBottom: 20 }}>
+            {saving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 16, color: "#FFFFFF" }}>Save Changes</Text>}
           </TouchableOpacity>
         )}
 
         {/* Stats */}
-        <View style={{ backgroundColor: "#FFFFFF", borderRadius: 20, padding: 20, marginBottom: 20 }}>
-          <Text style={{
-            fontFamily: "HankenGrotesk_500Medium", fontSize: 11, color: "#9794A4",
-            textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 16,
-          }}>
-            Prayer Stats
-          </Text>
+        <View style={cardStyle}>
+          <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 11, color: Theme.textFaint, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 16 }}>Prayer Stats</Text>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            {[
-              { label: "Prayer Streak", value: `${profile?.prayer_streak ?? 0} days` },
-              { label: "Subscription", value: profile?.subscription_status ?? "Free" },
-            ].map((s) => (
+            {[{ label: "Prayer Streak", value: `${profile?.prayer_streak ?? 0} days` }, { label: "Subscription", value: profile?.subscription_status ?? "Free" }].map((s) => (
               <View key={s.label} style={{ alignItems: "center" }}>
-                <Text style={{ fontFamily: "Newsreader_600SemiBold", fontSize: 22, color: "#1D1B26" }}>
-                  {s.value}
-                </Text>
-                <Text style={{ fontFamily: "HankenGrotesk_400Regular", fontSize: 12, color: "#9794A4", marginTop: 2 }}>
-                  {s.label}
-                </Text>
+                <Text style={{ fontFamily: Theme.font.serif, fontSize: 22, color: Theme.text }}>{s.value}</Text>
+                <Text style={{ fontFamily: Theme.font.sans, fontSize: 12, color: Theme.textFaint, marginTop: 2 }}>{s.label}</Text>
               </View>
             ))}
           </View>
         </View>
 
-        {/* Danger zone */}
-        <View style={{ backgroundColor: "#FFFFFF", borderRadius: 20, overflow: "hidden", marginBottom: 20 }}>
-          <TouchableOpacity
-            onPress={handleSignOut}
-            disabled={signingOut}
-            style={{
-              flexDirection: "row", alignItems: "center", paddingHorizontal: 20,
-              paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: "#F1EFF9",
-            }}
-          >
-            <Ionicons name="log-out-outline" size={20} color="#E0556B" style={{ marginRight: 12 }} />
-            <Text style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 15, color: "#E0556B", flex: 1 }}>
-              {signingOut ? "Signing out..." : "Sign Out"}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleDeleteAccount}
-            style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 16 }}
-          >
-            <Ionicons name="trash-outline" size={20} color="#9794A4" style={{ marginRight: 12 }} />
-            <Text style={{ fontFamily: "HankenGrotesk_400Regular", fontSize: 15, color: "#9794A4", flex: 1 }}>
-              Delete Account
-            </Text>
+        {/* Your data */}
+        <View style={{ backgroundColor: Theme.card, borderRadius: 20, overflow: "hidden", marginBottom: 20, borderWidth: 1, borderColor: Theme.cardBorder }}>
+          <TouchableOpacity onPress={handleExport} disabled={exporting} style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 16 }}>
+            <Ionicons name="download-outline" size={20} color={Theme.primary} style={{ marginRight: 12 }} />
+            <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 15, color: Theme.text, flex: 1 }}>{exporting ? "Preparing PDF..." : "Export my data (PDF)"}</Text>
+            <Ionicons name="chevron-forward" size={16} color={Theme.textFaint} />
           </TouchableOpacity>
         </View>
 
-        <Text style={{ fontFamily: "HankenGrotesk_400Regular", fontSize: 12, color: "#9794A4", textAlign: "center" }}>
+        {/* Danger zone */}
+        <View style={{ backgroundColor: Theme.card, borderRadius: 20, overflow: "hidden", marginBottom: 20, borderWidth: 1, borderColor: Theme.cardBorder }}>
+          <TouchableOpacity onPress={handleSignOut} style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: Theme.bg }}>
+            <Ionicons name="log-out-outline" size={20} color={Theme.urgent} style={{ marginRight: 12 }} />
+            <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 15, color: Theme.urgent, flex: 1 }}>Sign Out</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleCloseAccount} style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 16 }}>
+            <Ionicons name="close-circle-outline" size={20} color={Theme.textFaint} style={{ marginRight: 12 }} />
+            <Text style={{ fontFamily: Theme.font.sans, fontSize: 15, color: Theme.textMuted, flex: 1 }}>Close Account</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={{ fontFamily: Theme.font.sans, fontSize: 12, color: Theme.textFaint, textAlign: "center" }}>
           Prevail Prayer v1.0.0{"\n"}support@prevailprayer.com
         </Text>
       </ScrollView>

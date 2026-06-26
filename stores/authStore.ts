@@ -36,10 +36,11 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (!error && data) {
       const profile = data as Profile;
       set({ profile });
+      let timezone: string | undefined;
+      try { timezone = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch {}
       analytics.identify(userId, {
-        email: undefined,
         subscription_status: profile.subscription_status,
-        zip_code: profile.zip_code ?? undefined,
+        timezone,
       });
     }
   },
