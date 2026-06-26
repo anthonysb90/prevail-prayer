@@ -14,6 +14,7 @@ import { PrayerRequest } from "@/types";
 import { FEATURED_VERSES } from "@/constants/verses";
 import { useTheme } from "@/hooks/useTheme";
 import { Icon } from "@/components/ui/Icon";
+import { BrandMark } from "@/components/ui/BrandMark";
 import { VerseBlock, SectionHeader, RoundButton } from "@/components/ui/atoms";
 
 function getRandomVerse() {
@@ -58,7 +59,7 @@ function DevotionHero() {
             <Image source={{ uri: devotion.image_url }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
           ) : (
             <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-              <Icon name="cross" size={34} color="rgba(255,255,255,0.85)" />
+              <BrandMark size={48} />
             </View>
           )}
           {/* Badge */}

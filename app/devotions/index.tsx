@@ -6,6 +6,7 @@ import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { Devotion } from "@/types";
 import { useTheme } from "@/hooks/useTheme";
 import { Icon } from "@/components/ui/Icon";
+import { BrandMark } from "@/components/ui/BrandMark";
 
 function DevotionRow({ devotion }: { devotion: Devotion }) {
     const Theme = useTheme();
@@ -26,7 +27,7 @@ function DevotionRow({ devotion }: { devotion: Devotion }) {
         <Image source={{ uri: devotion.image_url }} style={{ width: 92, height: 92 }} resizeMode="cover" />
       ) : (
         <View style={{ width: 92, height: 92, backgroundColor: "#C7C4E2", alignItems: "center", justifyContent: "center" }}>
-          <Icon name="cross" size={26} color="rgba(255,255,255,0.9)" />
+          <BrandMark size={40} />
         </View>
       )}
       <View style={{ flex: 1, padding: 14, justifyContent: "center" }}>

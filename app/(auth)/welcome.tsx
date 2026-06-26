@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useTheme } from "@/hooks/useTheme";
 import { Icon } from "@/components/ui/Icon";
+import { BrandMark } from "@/components/ui/BrandMark";
 
 export default function WelcomeScreen() {
     const Theme = useTheme();
@@ -12,7 +13,7 @@ export default function WelcomeScreen() {
       <StatusBar style="dark" />
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32, paddingTop: 80 }}>
         <View style={{ width: 88, height: 88, borderRadius: 26, backgroundColor: Theme.primary, alignItems: "center", justifyContent: "center", marginBottom: 28, shadowColor: Theme.primary, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.35, shadowRadius: 24, elevation: 8 }}>
-          <Icon name="cross" size={38} color="#FFFFFF" />
+          <BrandMark size={38} />
         </View>
         <Text style={{ fontFamily: Theme.font.serif, fontSize: 42, color: Theme.text, textAlign: "center", marginBottom: 14 }}>Prevail Prayer</Text>
         <Text style={{ fontFamily: Theme.font.serifReg, fontSize: 17, color: Theme.textMuted, textAlign: "center", lineHeight: 26, paddingHorizontal: 8 }}>

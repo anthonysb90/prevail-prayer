@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import type { PurchasesPackage } from "react-native-purchases";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { Icon } from "@/components/ui/Icon";
+import { BrandMark } from "@/components/ui/BrandMark";
 import { getOfferings, purchasePackage, restorePurchases } from "@/lib/purchases";
 
 const PREMIUM_FEATURES = [
@@ -148,7 +149,7 @@ export function PaywallScreen() {
                 marginBottom: 20,
               }}
             >
-              <Icon name="cross" size={36} color="#FFFFFF" />
+              <BrandMark size={36} />
             </View>
             <Text
               style={{

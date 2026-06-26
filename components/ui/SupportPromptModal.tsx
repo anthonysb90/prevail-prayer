@@ -7,6 +7,7 @@ import { useSupportStore } from "@/stores/supportStore";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
 import { Icon } from "@/components/ui/Icon";
+import { BrandMark } from "@/components/ui/BrandMark";
 
 const DONATION_URL = "https://prevailprayer.com/support"; // update with real link
 const APP_STORE_URL = "https://apps.apple.com/app/prevail-prayer/idYOUR_APP_ID"; // update after submission
@@ -105,7 +106,7 @@ export function SupportPromptModal() {
                 marginBottom: 14,
               }}
             >
-              <Icon name="cross" size={26} color="#FFFFFF" />
+              <BrandMark size={26} />
             </View>
             <Text
               style={{

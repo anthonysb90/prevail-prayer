@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
 import { useTheme } from "@/hooks/useTheme";
 import { Icon } from "@/components/ui/Icon";
+import { BrandMark } from "@/components/ui/BrandMark";
 
 function formatPhone(input: string) {
   const digits = input.replace(/\D/g, "").slice(0, 10);
@@ -59,7 +60,7 @@ export default function PersonalizeScreen() {
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
         <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 60, paddingBottom: 40 }}>
           <View style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: Theme.primary, alignItems: "center", justifyContent: "center", marginBottom: 28 }}>
-            <Icon name="cross" size={30} color="#FFFFFF" />
+            <BrandMark size={30} />
           </View>
           <Text style={{ fontFamily: Theme.font.serif, fontSize: 30, color: Theme.text, marginBottom: 12 }}>One last thing.</Text>
           <Text style={{ fontFamily: Theme.font.sans, fontSize: 16, color: Theme.textMuted, lineHeight: 24, marginBottom: 32 }}>

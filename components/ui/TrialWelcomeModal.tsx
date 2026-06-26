@@ -5,6 +5,7 @@ import * as SecureStore from "expo-secure-store";
 import { useAuthStore } from "@/stores/authStore";
 import { isTrialActive, trialDaysLeft } from "@/lib/trial";
 import { Icon } from "@/components/ui/Icon";
+import { BrandMark } from "@/components/ui/BrandMark";
 
 const SEEN_KEY = "trial_welcome_seen_v1";
 
@@ -75,7 +76,7 @@ export function TrialWelcomeModal() {
                 marginBottom: 18,
               }}
             >
-              <Icon name="cross" size={34} color="#FFFFFF" />
+              <BrandMark size={34} />
             </View>
             <Text style={{ fontFamily: "Newsreader_600SemiBold", fontSize: 26, color: "#FFFFFF", textAlign: "center" }}>
               Your trial is on us
