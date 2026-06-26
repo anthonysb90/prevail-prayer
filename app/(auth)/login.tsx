@@ -10,6 +10,10 @@ import { AppTheme } from "@/constants/theme";
 import { Icon } from "@/components/ui/Icon";
 import { signInWithApple, signInWithGoogle } from "@/lib/socialAuth";
 
+// Apple Sign In is disabled until the App ID "Sign In with Apple" capability +
+// provisioning profile are configured (then set this to true & re-add usesAppleSignIn).
+const APPLE_SIGNIN_ENABLED = false;
+
 const mkInput = (Theme: AppTheme) => ({
   backgroundColor: Theme.card, borderWidth: 1, borderColor: Theme.cardBorder,
   borderRadius: Theme.radius.inner, paddingHorizontal: 16, paddingVertical: 14,
@@ -68,7 +72,7 @@ export default function LoginScreen() {
             <View style={{ flex: 1, height: 1, backgroundColor: Theme.cardBorder }} />
           </View>
 
-          {Platform.OS === "ios" && (
+          {APPLE_SIGNIN_ENABLED && Platform.OS === "ios" && (
             <TouchableOpacity onPress={handleApple} activeOpacity={0.85} style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: "#000000", borderRadius: Theme.radius.pill, paddingVertical: 15, marginBottom: 12 }}>
               <Icon name="apple" size={18} color="#FFFFFF" />
               <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 16, color: "#FFFFFF" }}>Continue with Apple</Text>
