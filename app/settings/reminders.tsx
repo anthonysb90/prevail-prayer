@@ -298,45 +298,42 @@ function RemindersContent() {
             <Text style={{ fontFamily: "HankenGrotesk_500Medium", fontSize: 12, color: "#9794A4", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
               Time
             </Text>
-            <TouchableOpacity
-              onPress={() => setShowTimePicker(true)}
-              style={{ backgroundColor: "#FFFFFF", borderRadius: 14, padding: 16, marginBottom: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
-            >
-              <Text style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 18, color: "#1D1B26" }}>
-                {format(time, "h:mm a")}
-              </Text>
-              <Ionicons name="time-outline" size={20} color="#9794A4" />
-            </TouchableOpacity>
-
-            {showTimePicker && (
-              Platform.OS === "ios" ? (
-                <View style={{ backgroundColor: "#FFFFFF", borderRadius: 14, marginBottom: 20, paddingBottom: 8 }}>
-                  <DateTimePicker
-                    value={time}
-                    mode="time"
-                    display="spinner"
-                    themeVariant="light"
-                    onChange={(_, selected) => { if (selected) setTime(selected); }}
-                    style={{ alignSelf: "center" }}
-                  />
-                  <TouchableOpacity
-                    onPress={() => setShowTimePicker(false)}
-                    style={{ alignSelf: "center", paddingHorizontal: 28, paddingVertical: 8, marginTop: 2 }}
-                  >
-                    <Text style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 15, color: "#5B53C6" }}>Done</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
+            {Platform.OS === "ios" ? (
+              <View style={{ backgroundColor: "#FFFFFF", borderRadius: 14, paddingVertical: 12, paddingHorizontal: 16, marginBottom: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <Text style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 16, color: "#1D1B26" }}>
+                  Reminder time
+                </Text>
                 <DateTimePicker
                   value={time}
                   mode="time"
-                  display="default"
-                  onChange={(_, selected) => {
-                    setShowTimePicker(false);
-                    if (selected) setTime(selected);
-                  }}
+                  display="compact"
+                  themeVariant="light"
+                  onChange={(_, selected) => { if (selected) setTime(selected); }}
                 />
-              )
+              </View>
+            ) : (
+              <>
+                <TouchableOpacity
+                  onPress={() => setShowTimePicker(true)}
+                  style={{ backgroundColor: "#FFFFFF", borderRadius: 14, padding: 16, marginBottom: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+                >
+                  <Text style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 18, color: "#1D1B26" }}>
+                    {format(time, "h:mm a")}
+                  </Text>
+                  <Ionicons name="time-outline" size={20} color="#9794A4" />
+                </TouchableOpacity>
+                {showTimePicker && (
+                  <DateTimePicker
+                    value={time}
+                    mode="time"
+                    display="default"
+                    onChange={(_, selected) => {
+                      setShowTimePicker(false);
+                      if (selected) setTime(selected);
+                    }}
+                  />
+                )}
+              </>
             )}
 
             <TouchableOpacity
