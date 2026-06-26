@@ -20,6 +20,15 @@ export interface Profile {
 
 export type PrayerStatus = "active" | "answered" | "completed" | "ongoing";
 
+export interface PrayerUpdate {
+  id: string;
+  prayer_request_id: string;
+  user_id: string;
+  note: string;
+  is_praise: boolean;
+  created_at: string;
+}
+
 export interface PrayerRequest {
   id: string;
   user_id: string;

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
-import { PrayerRequest, PrayerStatus } from "@/types";
+import { PrayerRequest, PrayerStatus, PrayerUpdate } from "@/types";
 
 const KEY = "prayer_requests";
 
@@ -274,5 +274,53 @@ export function useChangeStatus() {
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: PrayerStatus }) =>
       update.mutateAsync({ id, status }),
+  });
+}
+
+
+// ─── Prayer Updates (progress notes & praise reports) ────────────────────────
+export function usePrayerUpdates(prayerId: string) {
+  const { user } = useAuthStore();
+  return useQuery<PrayerUpdate[]>({
+    queryKey: [KEY, user?.id, "updates", prayerId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("prayer_updates")
+        .select("*")
+        .eq("prayer_request_id", prayerId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data as PrayerUpdate[]) ?? [];
+    },
+    enabled: !!user && !!prayerId,
+  });
+}
+
+export function useAddPrayerUpdate() {
+  const qc = useQueryClient();
+  const { user } = useAuthStore();
+  return useMutation({
+    mutationFn: async ({ prayerId, note, isPraise }: { prayerId: string; note: string; isPraise: boolean }) => {
+      const { data, error } = await supabase
+        .from("prayer_updates")
+        .insert({ prayer_request_id: prayerId, user_id: user!.id, note, is_praise: isPraise })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: [KEY, user?.id, "updates", vars.prayerId] }),
+  });
+}
+
+export function useDeletePrayerUpdate() {
+  const qc = useQueryClient();
+  const { user } = useAuthStore();
+  return useMutation({
+    mutationFn: async ({ id }: { id: string; prayerId: string }) => {
+      const { error } = await supabase.from("prayer_updates").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: [KEY, user?.id, "updates", vars.prayerId] }),
   });
 }

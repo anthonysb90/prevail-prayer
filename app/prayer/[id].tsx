@@ -1,12 +1,13 @@
 import {
   View, Text, ScrollView, TouchableOpacity,
-  Alert, ActivityIndicator, Share,
+  Alert, ActivityIndicator, Share, TextInput, Switch,
 } from "react-native";
+import { useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { format } from "date-fns";
-import { usePrayerRequest, useDeletePrayer, useMarkAnswered, useChangeStatus } from "@/hooks/usePrayers";
+import { usePrayerRequest, useDeletePrayer, useMarkAnswered, useChangeStatus, usePrayerUpdates, useAddPrayerUpdate, useDeletePrayerUpdate } from "@/hooks/usePrayers";
 import { CategoryChip } from "@/components/prayer/CategoryChip";
-import { PrayerStatus, PrayerRequest, Category } from "@/types";
+import { PrayerStatus, PrayerRequest, Category, PrayerUpdate } from "@/types";
 import { useTheme } from "@/hooks/useTheme";
 import { AppTheme } from "@/constants/theme";
 import { Icon } from "@/components/ui/Icon";
@@ -30,6 +31,17 @@ export default function PrayerDetailScreen() {
   const deletePrayer = useDeletePrayer();
   const markAnswered = useMarkAnswered();
   const changeStatus = useChangeStatus();
+  const { data: updates = [] } = usePrayerUpdates(id);
+  const addUpdate = useAddPrayerUpdate();
+  const delUpdate = useDeletePrayerUpdate();
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [noteText, setNoteText] = useState("");
+  const [isPraise, setIsPraise] = useState(false);
+  const submitUpdate = async () => {
+    if (!noteText.trim()) return;
+    await addUpdate.mutateAsync({ prayerId: id as string, note: noteText.trim(), isPraise });
+    setNoteText(""); setIsPraise(false); setComposerOpen(false);
+  };
 
   if (isLoading) {
     return (
@@ -135,6 +147,75 @@ export default function PrayerDetailScreen() {
             <Text style={{ fontFamily: Theme.font.serifReg, fontSize: 16, color: Theme.text, lineHeight: 25 }}>{prayer.answer_notes}</Text>
           </View>
         )}
+
+        {/* Prayer Journey — updates & praise reports (keeps request on your list) */}
+        <View style={{ marginBottom: 20 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <Text style={{ fontFamily: Theme.font.sansBold, fontSize: 12, color: Theme.primary, textTransform: "uppercase", letterSpacing: 1.5 }}>Prayer Journey</Text>
+            <TouchableOpacity onPress={() => setComposerOpen((v) => !v)} style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+              <Icon name={composerOpen ? "x" : "plus"} size={16} color={Theme.primary} />
+              <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 13, color: Theme.primary }}>{composerOpen ? "Close" : "Add update"}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {composerOpen && (
+            <View style={{ backgroundColor: Theme.card, borderRadius: Theme.radius.card, borderWidth: 1, borderColor: Theme.cardBorder, padding: 16, marginBottom: 14, ...Theme.shadow }}>
+              <TextInput
+                value={noteText}
+                onChangeText={setNoteText}
+                placeholder="What's the latest? A step forward, a change, a praise…"
+                placeholderTextColor={Theme.textFaint}
+                multiline
+                style={{ fontFamily: Theme.font.sans, fontSize: 16, color: Theme.text, minHeight: 70, textAlignVertical: "top" }}
+              />
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
+                <TouchableOpacity onPress={() => setIsPraise((p) => !p)} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <View style={{ width: 22, height: 22, borderRadius: 7, alignItems: "center", justifyContent: "center", backgroundColor: isPraise ? Theme.success : Theme.bg, borderWidth: 1, borderColor: isPraise ? Theme.success : Theme.cardBorder }}>
+                    {isPraise && <Icon name="check" size={14} color="#FFFFFF" />}
+                  </View>
+                  <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 14, color: Theme.textMuted }}>Praise report 🙌</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={submitUpdate} disabled={!noteText.trim()} style={{ backgroundColor: noteText.trim() ? Theme.primary : Theme.cardBorder, borderRadius: Theme.radius.pill, paddingHorizontal: 20, paddingVertical: 10 }}>
+                  <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 14, color: "#FFFFFF" }}>Post update</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {updates.length === 0 ? (
+            !composerOpen && (
+              <Text style={{ fontFamily: Theme.font.sans, fontSize: 14, color: Theme.textFaint, lineHeight: 21 }}>
+                No updates yet. Record how God is moving — a step forward, a change, a praise — and keep praying without taking it off your list.
+              </Text>
+            )
+          ) : (
+            <View>
+              {updates.map((u: PrayerUpdate, i: number) => (
+                <View key={u.id} style={{ flexDirection: "row", gap: 14 }}>
+                  {/* timeline rail */}
+                  <View style={{ alignItems: "center", width: 18 }}>
+                    <View style={{ width: 12, height: 12, borderRadius: 6, marginTop: 4, backgroundColor: u.is_praise ? Theme.success : Theme.primary }} />
+                    {i < updates.length - 1 && <View style={{ flex: 1, width: 2, backgroundColor: Theme.cardBorder, marginTop: 4 }} />}
+                  </View>
+                  <View style={{ flex: 1, paddingBottom: 18 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 12, color: Theme.textFaint }}>{format(new Date(u.created_at), "MMM d, yyyy")}</Text>
+                      {u.is_praise && (
+                        <View style={{ backgroundColor: "#ECF8F2", borderRadius: Theme.radius.pill, paddingHorizontal: 9, paddingVertical: 2 }}>
+                          <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 11, color: Theme.success }}>Praise</Text>
+                        </View>
+                      )}
+                      <TouchableOpacity onPress={() => delUpdate.mutate({ id: u.id, prayerId: id as string })} style={{ marginLeft: "auto" }}>
+                        <Icon name="trash" size={14} color={Theme.textFaint} />
+                      </TouchableOpacity>
+                    </View>
+                    <Text style={{ fontFamily: Theme.font.serifReg, fontSize: 16, color: Theme.text, lineHeight: 24 }}>{u.note}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
 
         {status !== "answered" && status !== "completed" && (
           <View style={{ marginBottom: 8 }}>
