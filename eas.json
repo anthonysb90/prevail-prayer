@@ -20,7 +20,8 @@
       },
       "android": {
         "buildType": "apk"
-      }
+      },
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
@@ -37,7 +38,8 @@
       },
       "android": {
         "buildType": "apk"
-      }
+      },
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
@@ -51,7 +53,8 @@
       "ios": {
         "enterpriseProvisioning": "universal",
         "image": "latest"
-      }
+      },
+      "channel": "production"
     }
   },
   "submit": {
