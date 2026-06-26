@@ -1,6 +1,6 @@
 import { View, Text } from "react-native";
 import { Category } from "@/types";
-import { Theme } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 
 interface CategoryChipProps {
   category: Category;
@@ -8,6 +8,7 @@ interface CategoryChipProps {
 }
 
 export function CategoryChip({ category, dark = false }: CategoryChipProps) {
+    const Theme = useTheme();
   return (
     <View
       style={{

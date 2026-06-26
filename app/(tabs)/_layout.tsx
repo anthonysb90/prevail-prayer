@@ -1,13 +1,14 @@
 import { Tabs, useRouter } from "expo-router";
 import { View, TouchableOpacity } from "react-native";
 import { Icon } from "@/components/ui/Icon";
-import { Theme } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 
 function Tab({ name, color, focused }: { name: string; color: string; focused: boolean }) {
   return <Icon name={name} size={24} color={color} sw={focused ? 2 : 1.7} />;
 }
 
 export default function TabLayout() {
+    const Theme = useTheme();
   const router = useRouter();
 
   return (

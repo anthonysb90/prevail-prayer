@@ -1,12 +1,13 @@
 import { useState } from "react";
 import {
   View, Text, TextInput, TouchableOpacity,
-  Alert, ActivityIndicator, ScrollView,
+  Alert, ActivityIndicator, ScrollView, Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
+import { pickAndUploadAvatar } from "@/lib/avatar";
 
 function formatPhone(input: string) {
   const digits = input.replace(/\D/g, "").slice(0, 10);
@@ -28,6 +29,7 @@ export default function AccountScreen() {
   const [zip, setZip] = useState(profile?.zip_code ?? "");
   const [saving, setSaving] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const phoneDigits = phone.replace(/\D/g, "");
   const phoneValid = phoneDigits.length === 0 || phoneDigits.length === 10;
@@ -62,6 +64,20 @@ export default function AccountScreen() {
       Alert.alert("Saved", "Your profile has been updated.");
     }
     setSaving(false);
+  };
+
+  const handleChangeAvatar = async () => {
+    if (!user) return;
+    setUploadingAvatar(true);
+    try {
+      const url = await pickAndUploadAvatar(user.id);
+      if (url) {
+        await fetchProfile(user.id);
+      }
+    } catch (e: any) {
+      Alert.alert("Could not update photo", e.message ?? "Please try again.");
+    }
+    setUploadingAvatar(false);
   };
 
   const handleSignOut = async () => {
@@ -125,6 +141,32 @@ export default function AccountScreen() {
           }}>
             Profile
           </Text>
+
+          {/* Avatar */}
+          <View style={{ alignItems: "center", marginBottom: 18 }}>
+            <TouchableOpacity onPress={handleChangeAvatar} activeOpacity={0.8} disabled={uploadingAvatar}>
+              {profile?.avatar_url ? (
+                <Image
+                  source={{ uri: profile.avatar_url }}
+                  style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: "#ECEAFA" }}
+                />
+              ) : (
+                <View style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: "#ECEAFA", alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ fontFamily: "Newsreader_600SemiBold", fontSize: 34, color: "#5B53C6" }}>
+                    {(displayName.trim().charAt(0) || "?").toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              <View style={{ position: "absolute", bottom: 0, right: 0, width: 30, height: 30, borderRadius: 15, backgroundColor: "#5B53C6", alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "#FFFFFF" }}>
+                <Ionicons name="camera" size={15} color="#FFFFFF" />
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleChangeAvatar} disabled={uploadingAvatar} style={{ marginTop: 10 }}>
+              <Text style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 13, color: "#5B53C6" }}>
+                {uploadingAvatar ? "Uploading..." : profile?.avatar_url ? "Change Photo" : "Add Photo"}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
           <Text style={{ fontFamily: "HankenGrotesk_500Medium", fontSize: 13, color: "#5A5666", marginBottom: 6 }}>
             Display Name

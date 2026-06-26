@@ -6,7 +6,7 @@ import {
 import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
-import { Theme } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 import { Icon } from "@/components/ui/Icon";
 
 function formatPhone(input: string) {
@@ -26,6 +26,7 @@ const input = {
 const lbl = { fontFamily: Theme.font.sansMed as string, fontSize: 13, color: Theme.textMuted, marginBottom: 6 };
 
 export default function PersonalizeScreen() {
+    const Theme = useTheme();
   const router = useRouter();
   const { user, fetchProfile } = useAuthStore();
   const [phone, setPhone] = useState("");

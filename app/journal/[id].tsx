@@ -6,10 +6,11 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { format } from "date-fns";
 import { useJournalEntry, useUpdateJournalEntry, useDeleteJournalEntry } from "@/hooks/useJournal";
-import { Theme } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 import { Icon } from "@/components/ui/Icon";
 
 export default function JournalEntryScreen() {
+    const Theme = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: entry, isLoading } = useJournalEntry(id);

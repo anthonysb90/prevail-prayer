@@ -304,15 +304,33 @@ function RemindersContent() {
             </TouchableOpacity>
 
             {showTimePicker && (
-              <DateTimePicker
-                value={time}
-                mode="time"
-                display={Platform.OS === "ios" ? "spinner" : "default"}
-                onChange={(_, selected) => {
-                  setShowTimePicker(false);
-                  if (selected) setTime(selected);
-                }}
-              />
+              Platform.OS === "ios" ? (
+                <View style={{ backgroundColor: "#FFFFFF", borderRadius: 14, marginBottom: 20, paddingBottom: 8 }}>
+                  <DateTimePicker
+                    value={time}
+                    mode="time"
+                    display="spinner"
+                    onChange={(_, selected) => { if (selected) setTime(selected); }}
+                    style={{ alignSelf: "center" }}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowTimePicker(false)}
+                    style={{ alignSelf: "center", paddingHorizontal: 28, paddingVertical: 8, marginTop: 2 }}
+                  >
+                    <Text style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 15, color: "#5B53C6" }}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <DateTimePicker
+                  value={time}
+                  mode="time"
+                  display="default"
+                  onChange={(_, selected) => {
+                    setShowTimePicker(false);
+                    if (selected) setTime(selected);
+                  }}
+                />
+              )
             )}
 
             <TouchableOpacity

@@ -7,20 +7,23 @@ import { format } from "date-fns";
 import { usePrayerRequest, useDeletePrayer, useMarkAnswered, useChangeStatus } from "@/hooks/usePrayers";
 import { CategoryChip } from "@/components/prayer/CategoryChip";
 import { PrayerStatus, PrayerRequest, Category } from "@/types";
-import { Theme } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
+import { AppTheme } from "@/constants/theme";
 import { Icon } from "@/components/ui/Icon";
 
-const STATUS_COLOR: Record<PrayerStatus, string> = {
+const mkStatusColor = (Theme: AppTheme): Record<PrayerStatus, string> => ({
   active: Theme.primary,
   ongoing: "#7A5BD0",
   answered: Theme.success,
   completed: Theme.textFaint,
-};
+});
 const STATUS_LABEL: Record<PrayerStatus, string> = {
   active: "Active", ongoing: "Ongoing", answered: "Answered", completed: "Completed",
 };
 
 export default function PrayerDetailScreen() {
+    const Theme = useTheme();
+    const STATUS_COLOR = mkStatusColor(Theme);
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: prayer, isLoading } = usePrayerRequest(id) as { data: PrayerRequest | undefined; isLoading: boolean };

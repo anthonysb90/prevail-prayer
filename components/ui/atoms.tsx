@@ -1,10 +1,11 @@
 import { View, Text, TouchableOpacity, StyleProp, ViewStyle } from "react-native";
-import { Theme } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 import { Icon } from "@/components/ui/Icon";
 import { Category } from "@/types";
 
 // Small-caps section label ───────────────────────────────────────────
 export function Eyebrow({ children, color, style }: { children: React.ReactNode; color?: string; style?: StyleProp<ViewStyle> }) {
+    const Theme = useTheme();
   return (
     <Text
       style={[
@@ -25,6 +26,7 @@ export function Eyebrow({ children, color, style }: { children: React.ReactNode;
 
 // White card surface ──────────────────────────────────────────────────
 export function Card({ children, style, onPress }: { children: React.ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void }) {
+    const Theme = useTheme();
   const content = (
     <View
       style={[
@@ -54,6 +56,7 @@ export function Card({ children, style, onPress }: { children: React.ReactNode; 
 
 // Category / topic tag pill ─────────────────────────────────────────────
 export function Tag({ category, small, dark }: { category: Category; small?: boolean; dark?: boolean }) {
+    const Theme = useTheme();
   return (
     <View
       style={{
@@ -81,6 +84,7 @@ export function Tag({ category, small, dark }: { category: Category; small?: boo
 export function RoundButton({
   name, onPress, dot, dark, size = 22,
 }: { name: string; onPress?: () => void; dot?: boolean; dark?: boolean; size?: number }) {
+    const Theme = useTheme();
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -111,6 +115,7 @@ export function RoundButton({
 export function VerseBlock({
   text, reference, onRefresh, dark,
 }: { text: string; reference: string; onRefresh?: () => void; dark?: boolean }) {
+    const Theme = useTheme();
   return (
     <Card style={dark ? { backgroundColor: Theme.darkSurface, borderColor: Theme.darkBorder } : undefined}>
       <View style={{ opacity: 0.3, marginBottom: 6 }}>
@@ -146,6 +151,7 @@ export function VerseBlock({
 export function SectionHeader({
   title, count, onAll, onAdd,
 }: { title: string; count?: number; onAll?: () => void; onAdd?: () => void }) {
+    const Theme = useTheme();
   return (
     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>

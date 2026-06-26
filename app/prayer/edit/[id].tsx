@@ -7,7 +7,8 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useCategories } from "@/hooks/useCategories";
 import { usePrayerRequest, useUpdatePrayer } from "@/hooks/usePrayers";
 import { PrayerStatus, PrayerRequest, Category } from "@/types";
-import { Theme } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
+import { AppTheme } from "@/constants/theme";
 import { Icon } from "@/components/ui/Icon";
 
 const STATUS_OPTIONS: { value: PrayerStatus; label: string }[] = [
@@ -16,18 +17,21 @@ const STATUS_OPTIONS: { value: PrayerStatus; label: string }[] = [
   { value: "completed", label: "Completed" },
 ];
 
-const inputStyle = {
+const mkInputStyle = (Theme: AppTheme) => ({
   backgroundColor: Theme.card, borderWidth: 1, borderColor: Theme.cardBorder,
   borderRadius: Theme.radius.inner, paddingHorizontal: 16, paddingVertical: 14,
   fontFamily: Theme.font.sans, fontSize: 16, color: Theme.text, marginBottom: 14,
-} as const;
+} as const);
 
-const fieldLabel = {
+const mkFieldLabel = (Theme: AppTheme) => ({
   fontFamily: Theme.font.sansBold as string, fontSize: 12, color: Theme.primary,
   textTransform: "uppercase" as const, letterSpacing: 1.5, marginBottom: 10,
-};
+});
 
 function EditForm({ prayerId }: { prayerId: string }) {
+    const Theme = useTheme();
+    const inputStyle = mkInputStyle(Theme);
+    const fieldLabel = mkFieldLabel(Theme);
   const router = useRouter();
   const { data: prayer, isLoading: prayerLoading } = usePrayerRequest(prayerId) as { data: PrayerRequest | undefined; isLoading: boolean };
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();

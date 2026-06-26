@@ -1,7 +1,7 @@
 import { View, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { PrayerRequest } from "@/types";
-import { Theme } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 import { Icon } from "@/components/ui/Icon";
 
 interface PrayerListItemProps {
@@ -9,6 +9,7 @@ interface PrayerListItemProps {
 }
 
 export function PrayerListItem({ prayer }: PrayerListItemProps) {
+    const Theme = useTheme();
   const router = useRouter();
   const cats = prayer.categories ?? [];
 

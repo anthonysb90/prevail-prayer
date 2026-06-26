@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { Profile } from "@/types";
+import { analytics } from "@/lib/analytics";
 
 interface AuthState {
   session: Session | null;
@@ -33,11 +34,18 @@ export const useAuthStore = create<AuthState>((set) => ({
       .single();
 
     if (!error && data) {
-      set({ profile: data as Profile });
+      const profile = data as Profile;
+      set({ profile });
+      analytics.identify(userId, {
+        email: undefined,
+        subscription_status: profile.subscription_status,
+        zip_code: profile.zip_code ?? undefined,
+      });
     }
   },
 
   signOut: async () => {
+    analytics.reset();
     await supabase.auth.signOut();
     set({ session: null, user: null, profile: null });
   },

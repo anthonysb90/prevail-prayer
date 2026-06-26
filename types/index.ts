@@ -3,6 +3,7 @@
 export interface Profile {
   id: string;
   display_name: string | null;
+  avatar_url: string | null;
   phone: string | null;
   zip_code: string | null;
   walk_with_god: string[] | null;

@@ -5,10 +5,11 @@ import { StatusBar } from "expo-status-bar";
 import { usePrayerList } from "@/hooks/usePrayers";
 import { PrayerListItem } from "@/components/prayer/PrayerListItem";
 import { PrayerRequest, Category } from "@/types";
-import { Theme } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 import { Icon } from "@/components/ui/Icon";
 
 export default function PrayScreen() {
+    const Theme = useTheme();
   const router = useRouter();
   const { data: prayers = [], isLoading, refetch } = usePrayerList();
   const [filter, setFilter] = useState<string | null>(null);
@@ -149,6 +150,7 @@ export default function PrayScreen() {
 }
 
 function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
+    const Theme = useTheme();
   return (
     <TouchableOpacity
       onPress={onPress}

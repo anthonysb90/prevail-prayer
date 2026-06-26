@@ -4,10 +4,11 @@ import { PremiumGate } from "@/components/ui/PremiumGate";
 import { JournalCard } from "@/components/journal/JournalCard";
 import { useJournalEntries } from "@/hooks/useJournal";
 import { JournalEntry } from "@/types";
-import { Theme } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 import { Icon } from "@/components/ui/Icon";
 
 function JournalContent() {
+    const Theme = useTheme();
   const router = useRouter();
   const { data: entries = [], isLoading, refetch } = useJournalEntries();
 

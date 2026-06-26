@@ -6,10 +6,11 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { format } from "date-fns";
 import { useDevotion, useDevotionResponse, useSubmitDevotionResponse } from "@/hooks/useDevotions";
-import { Theme } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 import { Icon } from "@/components/ui/Icon";
 
 export default function DevotionScreen() {
+    const Theme = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: devotion, isLoading } = useDevotion(id);

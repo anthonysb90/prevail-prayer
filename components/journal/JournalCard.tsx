@@ -2,10 +2,11 @@ import { View, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { format } from "date-fns";
 import { JournalEntry } from "@/types";
-import { Theme } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 import { Icon } from "@/components/ui/Icon";
 
 export function JournalCard({ entry }: { entry: JournalEntry }) {
+    const Theme = useTheme();
   const router = useRouter();
   const displayTitle =
     entry.title?.trim() || entry.body.split("\n")[0].substring(0, 60) || "Untitled Entry";

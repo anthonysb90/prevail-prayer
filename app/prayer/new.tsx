@@ -7,15 +7,17 @@ import { useRouter } from "expo-router";
 import { useCategories } from "@/hooks/useCategories";
 import { useCreatePrayer } from "@/hooks/usePrayers";
 import { PrayerStatus, Category } from "@/types";
-import { Theme } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
+import { AppTheme } from "@/constants/theme";
 import { Icon } from "@/components/ui/Icon";
+import { analytics } from "@/lib/analytics";
 
 const STATUS_OPTIONS: { value: PrayerStatus; label: string }[] = [
   { value: "active", label: "Active" },
   { value: "ongoing", label: "Ongoing" },
 ];
 
-const inputStyle = {
+const mkInputStyle = (Theme: AppTheme) => ({
   backgroundColor: Theme.card,
   borderWidth: 1,
   borderColor: Theme.cardBorder,
@@ -26,18 +28,21 @@ const inputStyle = {
   fontSize: 16,
   color: Theme.text,
   marginBottom: 14,
-} as const;
+} as const);
 
-const fieldLabel = {
+const mkFieldLabel = (Theme: AppTheme) => ({
   fontFamily: Theme.font.sansBold as string,
   fontSize: 12,
   color: Theme.primary,
   textTransform: "uppercase" as const,
   letterSpacing: 1.5,
   marginBottom: 10,
-};
+});
 
 export default function NewPrayerScreen() {
+    const Theme = useTheme();
+    const inputStyle = mkInputStyle(Theme);
+    const fieldLabel = mkFieldLabel(Theme);
   const router = useRouter();
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
   const createPrayer = useCreatePrayer();
@@ -55,6 +60,7 @@ export default function NewPrayerScreen() {
     if (!title.trim()) return Alert.alert("Please add a title for your prayer request.");
     try {
       await createPrayer.mutateAsync({ title, description, status, is_urgent: isUrgent, categoryIds: selectedCategoryIds });
+      analytics.capture("prayer_added", { is_urgent: isUrgent, status });
       router.back();
     } catch (e: any) {
       Alert.alert("Error saving prayer request", e.message);

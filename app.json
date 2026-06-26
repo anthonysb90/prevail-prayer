@@ -49,6 +49,12 @@
         {
           "microphonePermission": false
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Prevail Prayer uses your photos so you can set a profile picture."
+        }
       ]
     ],
     "experiments": {

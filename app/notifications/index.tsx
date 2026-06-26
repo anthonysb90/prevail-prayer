@@ -3,17 +3,20 @@ import { useRouter } from "expo-router";
 import { format } from "date-fns";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
 import { AnnouncementType } from "@/types";
-import { Theme } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
+import { AppTheme } from "@/constants/theme";
 import { Icon } from "@/components/ui/Icon";
 
-const TYPE_CONFIG: Record<AnnouncementType, { color: string; bg: string; icon: string; label: string }> = {
+const mkTypeConfig = (Theme: AppTheme): Record<AnnouncementType, { color: string; bg: string; icon: string; label: string }> => ({
   info:      { color: Theme.primary, bg: Theme.primarySoft, icon: "sparkle", label: "Info" },
   prayer:    { color: "#7A5BD0",     bg: "#EEEAFB",         icon: "pray",    label: "Prayer Need" },
   emergency: { color: Theme.urgent,  bg: "#FBEAEE",         icon: "flame",   label: "Emergency" },
   update:    { color: Theme.success, bg: "#ECF8F2",         icon: "check",   label: "Update" },
-};
+});
 
 export default function NotificationsScreen() {
+    const Theme = useTheme();
+    const TYPE_CONFIG = mkTypeConfig(Theme);
   const router = useRouter();
   const { data: announcements = [], isLoading, refetch } = useAnnouncements();
 

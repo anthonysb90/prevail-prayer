@@ -7,6 +7,8 @@ import { HankenGrotesk_400Regular, HankenGrotesk_500Medium, HankenGrotesk_600Sem
 import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
 import { StatusBar } from "expo-status-bar";
+import { Appearance } from "react-native";
+import { useThemeStore } from "@/stores/themeStore";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
 import { initializePurchases, getSubscriptionStatus } from "@/lib/purchases";
@@ -57,12 +59,27 @@ function AuthGuard() {
     };
   }, []);
 
+  // Theme: hydrate from storage and follow OS appearance changes
+  useEffect(() => {
+    useThemeStore.getState().hydrate();
+    const sub = Appearance.addChangeListener(({ colorScheme }) => {
+      useThemeStore.getState().setSystemScheme(colorScheme === "dark" ? "dark" : "light");
+    });
+    return () => sub.remove();
+  }, []);
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
+        if (_event === "PASSWORD_RECOVERY") {
+          router.replace("/(auth)/reset");
+          setIsLoading(false);
+          return;
+        }
         if (session?.user) {
           await fetchProfile(session.user.id);
+          await useThemeStore.getState().hydrate(useAuthStore.getState().profile?.theme_pref);
           // Initialize RevenueCat
           await initializePurchases(session.user.id);
           const premium = await getSubscriptionStatus();
@@ -80,6 +97,7 @@ function AuthGuard() {
       setSession(session);
       if (session?.user) {
         await fetchProfile(session.user.id);
+        await useThemeStore.getState().hydrate(useAuthStore.getState().profile?.theme_pref);
         await initializePurchases(session.user.id);
         const premium = await getSubscriptionStatus();
         setIsPremium(premium || isTrialActive(useAuthStore.getState().profile));
@@ -94,14 +112,20 @@ function AuthGuard() {
   useEffect(() => {
     if (isLoading) return;
     const inAuthGroup = segments[0] === "(auth)";
+    const onResetScreen = segments[0] === "(auth)" && segments[1] === "reset";
     if (!session && !inAuthGroup) {
       router.replace("/(auth)/welcome");
-    } else if (session && inAuthGroup) {
+    } else if (session && inAuthGroup && !onResetScreen) {
       router.replace("/(tabs)");
     }
   }, [session, isLoading, segments]);
 
   return <Slot />;
+}
+
+function ThemedStatusBar() {
+  const isDark = useThemeStore((s) => s.isDark);
+  return <StatusBar style={isDark ? "light" : "dark"} />;
 }
 
 export default function RootLayout() {
@@ -125,7 +149,7 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <StatusBar style="dark" />
+      <ThemedStatusBar />
       <AuthGuard />
       <PaywallScreen />
       <SupportPromptModal />

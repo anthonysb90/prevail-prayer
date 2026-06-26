@@ -4,10 +4,11 @@ import { format } from "date-fns";
 import { useDevotions } from "@/hooks/useDevotions";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { Devotion } from "@/types";
-import { Theme } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 import { Icon } from "@/components/ui/Icon";
 
 function DevotionRow({ devotion }: { devotion: Devotion }) {
+    const Theme = useTheme();
   const router = useRouter();
   const { isPremium, showPaywall } = useSubscriptionStore();
   const onPress = () => { if (!isPremium) return showPaywall(); router.push(`/devotions/${devotion.id}`); };
@@ -49,6 +50,7 @@ function DevotionRow({ devotion }: { devotion: Devotion }) {
 }
 
 export default function DevotionsArchiveScreen() {
+    const Theme = useTheme();
   const router = useRouter();
   const { data: devotions = [], isLoading, refetch } = useDevotions();
 

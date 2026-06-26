@@ -9,8 +9,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { logPrayerSession, updatePrayerStreak } from "@/lib/streak";
 import { useSupportPrompt } from "@/hooks/useSupportPrompt";
 import { useAmbientAudio } from "@/hooks/useAmbientAudio";
-import { Theme } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
+import { AppTheme } from "@/constants/theme";
 import { Icon } from "@/components/ui/Icon";
+import { analytics } from "@/lib/analytics";
 
 const DURATIONS = [
   { label: "5 min", seconds: 300 }, { label: "10 min", seconds: 600 },
@@ -31,12 +33,14 @@ function formatTime(seconds: number) {
   return m + ":" + s;
 }
 
-const label = {
+const mkLabel = (Theme: AppTheme) => ({
   color: Theme.darkMuted, fontFamily: Theme.font.sansBold as string, fontSize: 12,
   textTransform: "uppercase" as const, letterSpacing: 1.2, marginBottom: 10,
-};
+});
 
 function TimerContent() {
+    const Theme = useTheme();
+    const label = mkLabel(Theme);
   const router = useRouter();
   const { user } = useAuthStore();
   const qc = useQueryClient();
@@ -75,6 +79,7 @@ function TimerContent() {
       const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000);
       const sessionCount = await logPrayerSession(user.id, elapsed, track);
       await updatePrayerStreak(user.id);
+      analytics.capture("prayer_session_completed", { duration_seconds: elapsed, track, bell: bellInterval });
       qc.invalidateQueries({ queryKey: ["prayer_requests", user.id, "counts"] });
       await checkAndShow("session_completed", sessionCount);
     } catch {}
@@ -96,7 +101,7 @@ function TimerContent() {
     flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "space-between" as const,
     backgroundColor: Theme.darkSurface, borderRadius: Theme.radius.inner,
     borderWidth: 1, borderColor: on ? Theme.accentOnDark : Theme.darkBorder,
-    padding: 16, marginBottom: 8, opacity: running ? 0.5 : 1,
+    padding: 16, marginBottom: 8,
   });
 
   return (
@@ -144,7 +149,7 @@ function TimerContent() {
 
         <Text style={label}>Ambient Sound</Text>
         {TRACKS.map((t) => (
-          <TouchableOpacity key={t.id} onPress={() => { if (!running) setTrack(t.id); }} style={rowStyle(track === t.id)}>
+          <TouchableOpacity key={t.id} onPress={() => setTrack(t.id)} style={rowStyle(track === t.id)}>
             <Text style={{ color: Theme.darkText, fontFamily: Theme.font.sans, fontSize: 15 }}>{t.label}</Text>
             {track === t.id && <Icon name="check" size={18} color={Theme.accentOnDark} />}
           </TouchableOpacity>
@@ -152,7 +157,7 @@ function TimerContent() {
 
         <Text style={[label, { marginTop: 8 }]}>Bell Interval</Text>
         {BELL_OPTIONS.map((b) => (
-          <TouchableOpacity key={b.id} onPress={() => { if (!running) setBellInterval(b.id); }} style={rowStyle(bellInterval === b.id)}>
+          <TouchableOpacity key={b.id} onPress={() => setBellInterval(b.id)} style={rowStyle(bellInterval === b.id)}>
             <Text style={{ color: Theme.darkText, fontFamily: Theme.font.sans, fontSize: 15 }}>{b.label}</Text>
             {bellInterval === b.id && <Icon name="check" size={18} color={Theme.accentOnDark} />}
           </TouchableOpacity>

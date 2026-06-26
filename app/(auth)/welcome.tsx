@@ -1,10 +1,11 @@
 import { View, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { Theme } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 import { Icon } from "@/components/ui/Icon";
 
 export default function WelcomeScreen() {
+    const Theme = useTheme();
   const router = useRouter();
   return (
     <View style={{ flex: 1, backgroundColor: Theme.bg }}>

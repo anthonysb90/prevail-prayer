@@ -2,7 +2,7 @@ import { View, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { format } from "date-fns";
 import { PrayerRequest } from "@/types";
-import { Theme } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 import { Icon } from "@/components/ui/Icon";
 import { Tag } from "@/components/ui/atoms";
 
@@ -12,6 +12,7 @@ interface PrayerCardProps {
 }
 
 export function PrayerCard({ prayer, compact }: PrayerCardProps) {
+    const Theme = useTheme();
   const router = useRouter();
   const cats = prayer.categories ?? [];
 

@@ -3,7 +3,7 @@ import { useRouter } from "expo-router";
 import { PremiumGate } from "@/components/ui/PremiumGate";
 import { VERSE_TOPICS } from "@/constants/verses";
 import { ScriptureTopic } from "@/types";
-import { Theme } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 import { Icon } from "@/components/ui/Icon";
 
 const TOPIC_ICONS: Record<ScriptureTopic, string> = {
@@ -12,6 +12,7 @@ const TOPIC_ICONS: Record<ScriptureTopic, string> = {
 };
 
 function LibraryContent() {
+    const Theme = useTheme();
   const router = useRouter();
 
   return (

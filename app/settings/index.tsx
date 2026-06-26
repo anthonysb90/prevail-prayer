@@ -1,20 +1,50 @@
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Image, Share, Linking, Alert, Platform } from "react-native";
+import * as StoreReview from "expo-store-review";
 import { useRouter } from "expo-router";
 import { useAuthStore } from "@/stores/authStore";
-import { Theme } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 import { Icon } from "@/components/ui/Icon";
 
+const APP_STORE_URL = "https://apps.apple.com/app/id6778065935";
+const DONATION_URL = "https://prevailprayer.com/support";
+const SHARE_MESSAGE =
+  "I've been using Prevail Prayer to track my prayer requests and grow in prayer. Check it out: https://prevailprayer.com";
+
 export default function SettingsScreen() {
+    const Theme = useTheme();
   const router = useRouter();
   const { profile, signOut } = useAuthStore();
+
+  const handleRate = async () => {
+    try {
+      if (await StoreReview.isAvailableAsync()) {
+        await StoreReview.requestReview();
+        return;
+      }
+    } catch {}
+    Linking.openURL(`${APP_STORE_URL}?action=write-review`).catch(() =>
+      Alert.alert("Could not open the App Store")
+    );
+  };
+
+  const handleShare = () => {
+    Share.share({ message: SHARE_MESSAGE }).catch(() => {});
+  };
+
+  const handleSupport = () => {
+    Linking.openURL(DONATION_URL).catch(() =>
+      Alert.alert("Could not open link", "Visit prevailprayer.com/support")
+    );
+  };
 
   const rows = [
     { label: "General Reminders", icon: "bell", onPress: () => router.push("/settings/reminders") },
     { label: "Account", icon: "user", onPress: () => router.push("/settings/account") },
-    { label: "Theme", icon: "moon", onPress: () => {} },
-    { label: "Rate the App", icon: "sparkle", onPress: () => {} },
-    { label: "Share with a Friend", icon: "share", onPress: () => {} },
-    { label: "Support Prevail Prayer", icon: "heart", onPress: () => {} },
+    { label: "Devotions", icon: "book", onPress: () => router.push("/devotions") },
+    { label: "Theme", icon: "moon", onPress: () => router.push("/settings/theme") },
+    { label: "Rate the App", icon: "sparkle", onPress: handleRate },
+    { label: "Share with a Friend", icon: "share", onPress: handleShare },
+    { label: "Support Prevail Prayer", icon: "heart", onPress: handleSupport },
   ];
 
   const name = profile?.display_name ?? "Friend";
@@ -39,9 +69,13 @@ export default function SettingsScreen() {
             ...Theme.shadow,
           }}
         >
-          <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: Theme.primarySoft, alignItems: "center", justifyContent: "center" }}>
-            <Text style={{ fontFamily: Theme.font.serif, fontSize: 22, color: Theme.primary }}>{initial}</Text>
-          </View>
+          {profile?.avatar_url ? (
+            <Image source={{ uri: profile.avatar_url }} style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: Theme.primarySoft }} />
+          ) : (
+            <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: Theme.primarySoft, alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ fontFamily: Theme.font.serif, fontSize: 22, color: Theme.primary }}>{initial}</Text>
+            </View>
+          )}
           <View>
             <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 17, color: Theme.text }}>{name}</Text>
             <Text style={{ fontFamily: Theme.font.sans, fontSize: 13, color: Theme.textFaint, marginTop: 2 }}>Prevail Prayer</Text>

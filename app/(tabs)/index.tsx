@@ -12,7 +12,7 @@ import { useLatestDevotion, useDevotions } from "@/hooks/useDevotions";
 import { PrayerCard } from "@/components/prayer/PrayerCard";
 import { PrayerRequest } from "@/types";
 import { FEATURED_VERSES } from "@/constants/verses";
-import { Theme } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 import { Icon } from "@/components/ui/Icon";
 import { VerseBlock, SectionHeader, RoundButton } from "@/components/ui/atoms";
 
@@ -28,6 +28,7 @@ function getGreeting() {
 
 // ─── Devotion hero ────────────────────────────────────────────────────────────
 function DevotionHero() {
+    const Theme = useTheme();
   const router = useRouter();
   const { data: devotion, isLoading } = useLatestDevotion();
   const { isPremium, showPaywall } = useSubscriptionStore();
@@ -113,6 +114,7 @@ function DevotionHero() {
 
 // ─── Home ─────────────────────────────────────────────────────────────────────
 export default function HomeScreen() {
+    const Theme = useTheme();
   const router = useRouter();
   const { profile } = useAuthStore();
   const [verse, setVerse] = useState(getRandomVerse);
@@ -216,6 +218,7 @@ export default function HomeScreen() {
 }
 
 function Empty({ text, action, onPress }: { text: string; action?: string; onPress?: () => void }) {
+    const Theme = useTheme();
   return (
     <View
       style={{

@@ -7,10 +7,11 @@ import { useRouter } from "expo-router";
 import { useCreateJournalEntry } from "@/hooks/useJournal";
 import { useActivePrayers, useOngoingPrayers } from "@/hooks/usePrayers";
 import { PrayerRequest } from "@/types";
-import { Theme } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 import { Icon } from "@/components/ui/Icon";
 
 export default function NewJournalEntryScreen() {
+    const Theme = useTheme();
   const router = useRouter();
   const createEntry = useCreateJournalEntry();
   const { data: active = [] } = useActivePrayers();

@@ -10,7 +10,9 @@
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://pvcxobbqbugghlqjpmph.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2Y3hvYmJxYnVnZ2hscWpwbXBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3MTQ1NDMsImV4cCI6MjA5NjI5MDU0M30.4dUqXL-WzyqVS_C7swESYZFTAo4QYZ_t0jOL_vM8GuM",
-        "EXPO_PUBLIC_RC_IOS_KEY": "appl_EmpUHYJkmjslFZNdJRWXjtNndMb"
+        "EXPO_PUBLIC_RC_IOS_KEY": "appl_EmpUHYJkmjslFZNdJRWXjtNndMb",
+        "EXPO_PUBLIC_POSTHOG_KEY": "",
+        "EXPO_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com"
       },
       "ios": {
         "simulator": false,
@@ -25,7 +27,9 @@
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://pvcxobbqbugghlqjpmph.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2Y3hvYmJxYnVnZ2hscWpwbXBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3MTQ1NDMsImV4cCI6MjA5NjI5MDU0M30.4dUqXL-WzyqVS_C7swESYZFTAo4QYZ_t0jOL_vM8GuM",
-        "EXPO_PUBLIC_RC_IOS_KEY": "appl_EmpUHYJkmjslFZNdJRWXjtNndMb"
+        "EXPO_PUBLIC_RC_IOS_KEY": "appl_EmpUHYJkmjslFZNdJRWXjtNndMb",
+        "EXPO_PUBLIC_POSTHOG_KEY": "",
+        "EXPO_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com"
       },
       "ios": {
         "simulator": true,
@@ -40,7 +44,9 @@
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://pvcxobbqbugghlqjpmph.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2Y3hvYmJxYnVnZ2hscWpwbXBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3MTQ1NDMsImV4cCI6MjA5NjI5MDU0M30.4dUqXL-WzyqVS_C7swESYZFTAo4QYZ_t0jOL_vM8GuM",
-        "EXPO_PUBLIC_RC_IOS_KEY": "appl_EmpUHYJkmjslFZNdJRWXjtNndMb"
+        "EXPO_PUBLIC_RC_IOS_KEY": "appl_EmpUHYJkmjslFZNdJRWXjtNndMb",
+        "EXPO_PUBLIC_POSTHOG_KEY": "",
+        "EXPO_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com"
       },
       "ios": {
         "enterpriseProvisioning": "universal",
