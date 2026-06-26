@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import {
   View, Text, TouchableOpacity, ScrollView,
-  Modal, Alert, ActivityIndicator, Platform,
+  Modal, Alert, ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import * as Notifications from "expo-notifications";
 import { PremiumGate } from "@/components/ui/PremiumGate";
 import { supabase } from "@/lib/supabase";
@@ -14,7 +13,6 @@ import { scheduleLocalReminder, cancelReminder } from "@/lib/notifications";
 import { format } from "date-fns";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const FULL_DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 
 interface Reminder {
   id: string;
@@ -24,6 +22,26 @@ interface Reminder {
   is_active: boolean;
 }
 
+const pad = (n: number) => n.toString().padStart(2, "0");
+
+// Custom number stepper (chevron up / value / chevron down) — fully in-JS so it
+// can never render invisibly the way the native time picker did on iOS.
+function Stepper({ value, onUp, onDown }: { value: string; onUp: () => void; onDown: () => void }) {
+  return (
+    <View style={{ alignItems: "center" }}>
+      <TouchableOpacity onPress={onUp} hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }} style={{ padding: 4 }}>
+        <Ionicons name="chevron-up" size={24} color="#5B53C6" />
+      </TouchableOpacity>
+      <Text style={{ fontFamily: "Newsreader_600SemiBold", fontSize: 38, color: "#1D1B26", minWidth: 54, textAlign: "center" }}>
+        {value}
+      </Text>
+      <TouchableOpacity onPress={onDown} hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }} style={{ padding: 4 }}>
+        <Ionicons name="chevron-down" size={24} color="#5B53C6" />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 function RemindersContent() {
   const router = useRouter();
   const { user } = useAuthStore();
@@ -31,12 +49,12 @@ function RemindersContent() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
-  // New reminder form state
+  // Form state
   const [recurrence, setRecurrence] = useState<"daily" | "weekly">("daily");
   const [selectedDays, setSelectedDays] = useState<number[]>([1]); // Mon default
   const [time, setTime] = useState(new Date(new Date().setHours(8, 0, 0, 0)));
-  const [showTimePicker, setShowTimePicker] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -52,13 +70,69 @@ function RemindersContent() {
       });
   }, [user]);
 
-  const toggleDay = (day: number) => {
-    setSelectedDays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
-    );
+  // ── Time parts (12-hour) derived from the `time` Date ──────────────────────
+  const h24 = time.getHours();
+  const period: "AM" | "PM" = h24 >= 12 ? "PM" : "AM";
+  const h12 = ((h24 + 11) % 12) + 1;
+  const minute = time.getMinutes();
+
+  const setParts = (nh12: number, nmin: number, nperiod: "AM" | "PM") => {
+    let h = nh12 % 12;
+    if (nperiod === "PM") h += 12;
+    const d = new Date(time);
+    d.setHours(h, nmin, 0, 0);
+    setTime(d);
+  };
+  const stepHour = (dir: number) => setParts(((h12 - 1 + dir + 12) % 12) + 1, minute, period);
+  const stepMin = (dir: number) => setParts(h12, (minute + dir * 5 + 60) % 60, period);
+
+  const toggleDay = (day: number) =>
+    setSelectedDays((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]));
+
+  // ── Notification helpers ───────────────────────────────────────────────────
+  const cancelAllFor = async (id: string) => {
+    await cancelReminder(`reminder_${id}`);
+    for (let d = 0; d < 7; d++) await cancelReminder(`reminder_${id}_day${d}`);
+  };
+  const scheduleFor = async (id: string) => {
+    const body = "Time to pray. Open your prayer list.";
+    if (recurrence === "daily") {
+      await scheduleLocalReminder({
+        title: "Prevail Prayer", body,
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour: time.getHours(), minute: time.getMinutes() },
+        identifier: `reminder_${id}`,
+      });
+    } else {
+      for (const dayIndex of selectedDays) {
+        await scheduleLocalReminder({
+          title: "Prevail Prayer", body,
+          trigger: { type: Notifications.SchedulableTriggerInputTypes.WEEKLY, weekday: dayIndex + 1, hour: time.getHours(), minute: time.getMinutes() },
+          identifier: `reminder_${id}_day${dayIndex}`,
+        });
+      }
+    }
   };
 
-  const handleAdd = async () => {
+  const openAdd = () => {
+    setEditingId(null);
+    setRecurrence("daily");
+    setSelectedDays([1]);
+    setTime(new Date(new Date().setHours(8, 0, 0, 0)));
+    setShowModal(true);
+  };
+
+  const openEdit = (r: Reminder) => {
+    const [h, m] = r.reminder_time.split(":").map(Number);
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    setTime(d);
+    setRecurrence(r.recurrence_type);
+    setSelectedDays(r.days_of_week && r.days_of_week.length ? r.days_of_week : [1]);
+    setEditingId(r.id);
+    setShowModal(true);
+  };
+
+  const handleSave = async () => {
     if (recurrence === "weekly" && selectedDays.length === 0) {
       Alert.alert("Select at least one day.");
       return;
@@ -66,71 +140,40 @@ function RemindersContent() {
     if (!user) return;
     setSaving(true);
 
-    const timeString = `${time.getHours().toString().padStart(2, "0")}:${time.getMinutes().toString().padStart(2, "0")}:00`;
+    const row = {
+      recurrence_type: recurrence,
+      days_of_week: recurrence === "weekly" ? [...selectedDays].sort() : null,
+      reminder_time: `${pad(time.getHours())}:${pad(time.getMinutes())}:00`,
+    };
 
     try {
-      const { data: reminder, error } = await supabase
-        .from("reminders")
-        .insert({
-          user_id: user.id,
-          reminder_type: "general",
-          recurrence_type: recurrence,
-          days_of_week: recurrence === "weekly" ? selectedDays.sort() : null,
-          reminder_time: timeString,
-          is_active: true,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Schedule local notification(s)
-      const notificationBody = "Time to pray. Open your prayer list.";
-
-      if (recurrence === "daily") {
-        await scheduleLocalReminder({
-          title: "Prevail Prayer",
-          body: notificationBody,
-          trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.DAILY,
-            hour: time.getHours(),
-            minute: time.getMinutes(),
-          },
-          identifier: `reminder_${reminder.id}`,
-        });
+      if (editingId) {
+        const { error } = await supabase.from("reminders").update(row).eq("id", editingId);
+        if (error) throw error;
+        await cancelAllFor(editingId);
+        await scheduleFor(editingId);
+        setReminders((prev) => prev.map((r) => (r.id === editingId ? ({ ...r, ...row } as Reminder) : r)));
       } else {
-        // Schedule one notification per selected day
-        for (const dayIndex of selectedDays) {
-          await scheduleLocalReminder({
-            title: "Prevail Prayer",
-            body: notificationBody,
-            trigger: {
-              type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
-              weekday: dayIndex + 1, // expo uses 1=Sun
-              hour: time.getHours(),
-              minute: time.getMinutes(),
-            },
-            identifier: `reminder_${reminder.id}_day${dayIndex}`,
-          });
-        }
+        const { data: reminder, error } = await supabase
+          .from("reminders")
+          .insert({ user_id: user.id, reminder_type: "general", ...row, is_active: true })
+          .select()
+          .single();
+        if (error) throw error;
+        await scheduleFor(reminder.id);
+        setReminders((prev) => [reminder as Reminder, ...prev]);
       }
-
-      setReminders((prev) => [reminder as Reminder, ...prev]);
       setShowModal(false);
+      setEditingId(null);
     } catch (e: any) {
-      Alert.alert("Error adding reminder", e.message);
+      Alert.alert("Error saving reminder", e.message);
     }
     setSaving(false);
   };
 
   const handleToggle = async (reminder: Reminder) => {
-    await supabase
-      .from("reminders")
-      .update({ is_active: !reminder.is_active })
-      .eq("id", reminder.id);
-    setReminders((prev) =>
-      prev.map((r) => r.id === reminder.id ? { ...r, is_active: !r.is_active } : r)
-    );
+    await supabase.from("reminders").update({ is_active: !reminder.is_active }).eq("id", reminder.id);
+    setReminders((prev) => prev.map((r) => (r.id === reminder.id ? { ...r, is_active: !r.is_active } : r)));
   };
 
   const handleDelete = async (reminder: Reminder) => {
@@ -141,16 +184,7 @@ function RemindersContent() {
         style: "destructive",
         onPress: async () => {
           await supabase.from("reminders").delete().eq("id", reminder.id);
-
-          // Cancel scheduled notifications
-          if (reminder.recurrence_type === "daily") {
-            await cancelReminder(`reminder_${reminder.id}`);
-          } else {
-            for (let d = 0; d < 7; d++) {
-              await cancelReminder(`reminder_${reminder.id}_day${d}`);
-            }
-          }
-
+          await cancelAllFor(reminder.id);
           setReminders((prev) => prev.filter((r) => r.id !== reminder.id));
         },
       },
@@ -162,9 +196,7 @@ function RemindersContent() {
     const d = new Date();
     d.setHours(h, m);
     const timeStr = format(d, "h:mm a");
-
     if (r.recurrence_type === "daily") return `Every day at ${timeStr}`;
-
     const dayNames = (r.days_of_week ?? []).map((i) => DAYS[i]).join(", ");
     return `${dayNames} at ${timeStr}`;
   };
@@ -177,14 +209,9 @@ function RemindersContent() {
           <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
             <Ionicons name="arrow-back" size={22} color="#5A5666" />
           </TouchableOpacity>
-          <Text style={{ fontFamily: "Newsreader_600SemiBold", fontSize: 24, color: "#1D1B26" }}>
-            General Reminders
-          </Text>
+          <Text style={{ fontFamily: "Newsreader_600SemiBold", fontSize: 24, color: "#1D1B26" }}>General Reminders</Text>
         </View>
-        <TouchableOpacity
-          onPress={() => setShowModal(true)}
-          style={{ backgroundColor: "#5B53C6", borderRadius: 20, width: 36, height: 36, alignItems: "center", justifyContent: "center" }}
-        >
+        <TouchableOpacity onPress={openAdd} style={{ backgroundColor: "#5B53C6", borderRadius: 20, width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
           <Ionicons name="add" size={22} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
@@ -207,23 +234,17 @@ function RemindersContent() {
           reminders.map((r) => (
             <View
               key={r.id}
-              style={{
-                backgroundColor: "#FFFFFF", borderRadius: 16, padding: 16,
-                marginBottom: 10, flexDirection: "row", alignItems: "center",
-              }}
+              style={{ backgroundColor: "#FFFFFF", borderRadius: 16, padding: 16, marginBottom: 10, flexDirection: "row", alignItems: "center" }}
             >
-              <Ionicons name="alarm-outline" size={20} color="#5B53C6" style={{ marginRight: 12 }} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 15, color: "#1D1B26" }}>
-                  {formatReminderLabel(r)}
-                </Text>
-              </View>
+              <TouchableOpacity onPress={() => openEdit(r)} style={{ flex: 1, flexDirection: "row", alignItems: "center" }} activeOpacity={0.7}>
+                <Ionicons name="alarm-outline" size={20} color="#5B53C6" style={{ marginRight: 12 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 15, color: "#1D1B26" }}>{formatReminderLabel(r)}</Text>
+                  <Text style={{ fontFamily: "HankenGrotesk_400Regular", fontSize: 12, color: "#9794A4", marginTop: 2 }}>Tap to edit</Text>
+                </View>
+              </TouchableOpacity>
               <TouchableOpacity onPress={() => handleToggle(r)} style={{ marginRight: 12 }}>
-                <Ionicons
-                  name={r.is_active ? "toggle" : "toggle-outline"}
-                  size={28}
-                  color={r.is_active ? "#5B53C6" : "#9794A4"}
-                />
+                <Ionicons name={r.is_active ? "toggle" : "toggle-outline"} size={28} color={r.is_active ? "#5B53C6" : "#9794A4"} />
               </TouchableOpacity>
               <TouchableOpacity onPress={() => handleDelete(r)}>
                 <Ionicons name="trash-outline" size={18} color="#9794A4" />
@@ -233,15 +254,15 @@ function RemindersContent() {
         )}
       </ScrollView>
 
-      {/* Add reminder modal */}
+      {/* Add / edit reminder modal */}
       <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
         <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" }}>
           <View style={{ backgroundColor: "#F1EFF9", borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, paddingBottom: 44 }}>
             <Text style={{ fontFamily: "Newsreader_600SemiBold", fontSize: 22, color: "#1D1B26", marginBottom: 20 }}>
-              Add Reminder
+              {editingId ? "Edit Reminder" : "Add Reminder"}
             </Text>
 
-            {/* Recurrence type */}
+            {/* Frequency */}
             <Text style={{ fontFamily: "HankenGrotesk_500Medium", fontSize: 12, color: "#9794A4", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
               Frequency
             </Text>
@@ -253,8 +274,7 @@ function RemindersContent() {
                   style={{
                     flex: 1, paddingVertical: 12, borderRadius: 100,
                     backgroundColor: recurrence === r ? "#1D1B26" : "#FFFFFF",
-                    alignItems: "center",
-                    borderWidth: 1, borderColor: recurrence === r ? "#1D1B26" : "#E7E5EF",
+                    alignItems: "center", borderWidth: 1, borderColor: recurrence === r ? "#1D1B26" : "#E7E5EF",
                   }}
                 >
                   <Text style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 14, color: recurrence === r ? "#FFFFFF" : "#5A5666" }}>
@@ -264,7 +284,7 @@ function RemindersContent() {
               ))}
             </View>
 
-            {/* Day picker (weekly only) */}
+            {/* Days (weekly only) */}
             {recurrence === "weekly" && (
               <>
                 <Text style={{ fontFamily: "HankenGrotesk_500Medium", fontSize: 12, color: "#9794A4", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
@@ -280,13 +300,10 @@ function RemindersContent() {
                         style={{
                           flex: 1, paddingVertical: 8, borderRadius: 10,
                           backgroundColor: selected ? "#5B53C6" : "#FFFFFF",
-                          alignItems: "center",
-                          borderWidth: 1, borderColor: selected ? "#5B53C6" : "#E7E5EF",
+                          alignItems: "center", borderWidth: 1, borderColor: selected ? "#5B53C6" : "#E7E5EF",
                         }}
                       >
-                        <Text style={{ fontFamily: "HankenGrotesk_500Medium", fontSize: 12, color: selected ? "#FFFFFF" : "#5A5666" }}>
-                          {day}
-                        </Text>
+                        <Text style={{ fontFamily: "HankenGrotesk_500Medium", fontSize: 12, color: selected ? "#FFFFFF" : "#5A5666" }}>{day}</Text>
                       </TouchableOpacity>
                     );
                   })}
@@ -294,50 +311,29 @@ function RemindersContent() {
               </>
             )}
 
-            {/* Time picker */}
+            {/* Time — custom stepper picker */}
             <Text style={{ fontFamily: "HankenGrotesk_500Medium", fontSize: 12, color: "#9794A4", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
               Time
             </Text>
-            {Platform.OS === "ios" ? (
-              <View style={{ backgroundColor: "#FFFFFF", borderRadius: 14, paddingVertical: 12, paddingHorizontal: 16, marginBottom: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <Text style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 16, color: "#1D1B26" }}>
-                  Reminder time
-                </Text>
-                <DateTimePicker
-                  value={time}
-                  mode="time"
-                  display="compact"
-                  themeVariant="light"
-                  onChange={(_, selected) => { if (selected) setTime(selected); }}
-                />
+            <View style={{ backgroundColor: "#FFFFFF", borderRadius: 14, paddingVertical: 16, paddingHorizontal: 16, marginBottom: 24, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 12 }}>
+              <Stepper value={h12.toString()} onUp={() => stepHour(1)} onDown={() => stepHour(-1)} />
+              <Text style={{ fontFamily: "Newsreader_600SemiBold", fontSize: 34, color: "#1D1B26", marginBottom: 4 }}>:</Text>
+              <Stepper value={pad(minute)} onUp={() => stepMin(1)} onDown={() => stepMin(-1)} />
+              <View style={{ gap: 8, marginLeft: 8 }}>
+                {(["AM", "PM"] as const).map((p) => (
+                  <TouchableOpacity
+                    key={p}
+                    onPress={() => setParts(h12, minute, p)}
+                    style={{ paddingVertical: 8, paddingHorizontal: 16, borderRadius: 10, backgroundColor: period === p ? "#5B53C6" : "#F1EFF9" }}
+                  >
+                    <Text style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 15, color: period === p ? "#FFFFFF" : "#5A5666" }}>{p}</Text>
+                  </TouchableOpacity>
+                ))}
               </View>
-            ) : (
-              <>
-                <TouchableOpacity
-                  onPress={() => setShowTimePicker(true)}
-                  style={{ backgroundColor: "#FFFFFF", borderRadius: 14, padding: 16, marginBottom: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
-                >
-                  <Text style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 18, color: "#1D1B26" }}>
-                    {format(time, "h:mm a")}
-                  </Text>
-                  <Ionicons name="time-outline" size={20} color="#9794A4" />
-                </TouchableOpacity>
-                {showTimePicker && (
-                  <DateTimePicker
-                    value={time}
-                    mode="time"
-                    display="default"
-                    onChange={(_, selected) => {
-                      setShowTimePicker(false);
-                      if (selected) setTime(selected);
-                    }}
-                  />
-                )}
-              </>
-            )}
+            </View>
 
             <TouchableOpacity
-              onPress={handleAdd}
+              onPress={handleSave}
               disabled={saving}
               style={{ backgroundColor: "#5B53C6", borderRadius: 100, paddingVertical: 16, alignItems: "center" }}
             >
@@ -345,11 +341,11 @@ function RemindersContent() {
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
                 <Text style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 16, color: "#FFFFFF" }}>
-                  Add Reminder
+                  {editingId ? "Save Changes" : "Add Reminder"}
                 </Text>
               )}
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setShowModal(false)} style={{ alignItems: "center", paddingTop: 14 }}>
+            <TouchableOpacity onPress={() => { setShowModal(false); setEditingId(null); }} style={{ alignItems: "center", paddingTop: 14 }}>
               <Text style={{ fontFamily: "HankenGrotesk_400Regular", fontSize: 14, color: "#9794A4" }}>Cancel</Text>
             </TouchableOpacity>
           </View>
