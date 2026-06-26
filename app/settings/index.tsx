@@ -1,5 +1,8 @@
-import { View, Text, TouchableOpacity, ScrollView, Image, Share, Linking, Alert, Platform } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Image, Share, Linking, Alert, Platform, Switch } from "react-native";
+import { useState, useEffect } from "react";
 import * as StoreReview from "expo-store-review";
+import { useAppLockStore } from "@/stores/appLockStore";
+import { isBiometricAvailable, getBiometricLabel, authenticate } from "@/lib/biometrics";
 import { useRouter } from "expo-router";
 import { useAuthStore } from "@/stores/authStore";
 import { useTheme } from "@/hooks/useTheme";
@@ -107,6 +110,33 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* Security / biometric lock */}
+        {bioAvailable && (
+          <View
+            style={{
+              backgroundColor: Theme.card, borderRadius: Theme.radius.card,
+              borderWidth: 1, borderColor: Theme.cardBorder, marginBottom: 22,
+              paddingHorizontal: 18, paddingVertical: 16,
+              flexDirection: "row", alignItems: "center", gap: 14,
+              ...Theme.shadow,
+            }}
+          >
+            <Icon name="lock" size={20} color={Theme.textMuted} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 15, color: Theme.text }}>{bioLabel} Lock</Text>
+              <Text style={{ fontFamily: Theme.font.sans, fontSize: 12, color: Theme.textFaint, marginTop: 2 }}>
+                Require {bioLabel} to open the app
+              </Text>
+            </View>
+            <Switch
+              value={lockEnabled}
+              onValueChange={toggleLock}
+              trackColor={{ false: Theme.cardBorder, true: Theme.primary }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+        )}
 
         {/* Sign out */}
         <TouchableOpacity

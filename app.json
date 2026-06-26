@@ -55,6 +55,12 @@
         {
           "photosPermission": "Prevail Prayer uses your photos so you can set a profile picture."
         }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Use Face ID to unlock Prevail Prayer."
+        }
       ]
     ],
     "experiments": {

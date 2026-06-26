@@ -7,8 +7,10 @@ import { HankenGrotesk_400Regular, HankenGrotesk_500Medium, HankenGrotesk_600Sem
 import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
 import { StatusBar } from "expo-status-bar";
-import { Appearance } from "react-native";
+import { Appearance, AppState } from "react-native";
 import { useThemeStore } from "@/stores/themeStore";
+import { useAppLockStore } from "@/stores/appLockStore";
+import { LockScreen } from "@/components/ui/LockScreen";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
 import { initializePurchases, getSubscriptionStatus } from "@/lib/purchases";
@@ -123,6 +125,26 @@ function AuthGuard() {
   return <Slot />;
 }
 
+function LockGate() {
+  const { session } = useAuthStore();
+  const { enabled, unlocked, hydrated, hydrate, setUnlocked } = useAppLockStore();
+
+  useEffect(() => { hydrate(); }, []);
+
+  // Re-lock whenever the app goes to the background.
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "background" && useAppLockStore.getState().enabled) {
+        setUnlocked(false);
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
+  if (session && hydrated && enabled && !unlocked) return <LockScreen />;
+  return null;
+}
+
 function ThemedStatusBar() {
   const isDark = useThemeStore((s) => s.isDark);
   return <StatusBar style={isDark ? "light" : "dark"} />;
@@ -154,6 +176,7 @@ export default function RootLayout() {
       <PaywallScreen />
       <SupportPromptModal />
       <TrialWelcomeModal />
+      <LockGate />
     </QueryClientProvider>
   );
 }
