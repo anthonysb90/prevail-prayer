@@ -9,6 +9,11 @@ import { useTheme } from "@/hooks/useTheme";
 import { AppTheme } from "@/constants/theme";
 import { Icon } from "@/components/ui/Icon";
 import { analytics } from "@/lib/analytics";
+import { signInWithApple, signInWithGoogle } from "@/lib/socialAuth";
+
+// Mirrors login.tsx: Apple Sign In is enabled now that the App ID capability +
+// Supabase Apple provider are configured.
+const APPLE_SIGNIN_ENABLED = true;
 
 const mkInput = (Theme: AppTheme) => ({
   backgroundColor: Theme.card, borderWidth: 1, borderColor: Theme.cardBorder,
@@ -27,6 +32,9 @@ export default function SignupScreen() {
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
   const [confirmSent, setConfirmSent] = useState(false);
+
+  const handleApple = async () => { try { await signInWithApple(); } catch (e: any) { if (e?.code !== "ERR_REQUEST_CANCELED") Alert.alert("Apple Sign In", e?.message ?? "Could not sign in."); } };
+  const handleGoogle = async () => { try { await signInWithGoogle(); } catch (e: any) { Alert.alert("Google Sign In", e?.message ?? "Could not sign in."); } };
 
   const handleSignUp = async () => {
     if (!displayName.trim() || !email || !password) {
@@ -105,6 +113,24 @@ export default function SignupScreen() {
           <TouchableOpacity onPress={handleSignUp} disabled={loading} activeOpacity={0.88} style={{ backgroundColor: Theme.primary, borderRadius: Theme.radius.pill, paddingVertical: 16, alignItems: "center" }}>
             <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 16, color: "#FFFFFF" }}>{loading ? "Creating Account..." : "Create Account"}</Text>
           </TouchableOpacity>
+
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginVertical: 22 }}>
+            <View style={{ flex: 1, height: 1, backgroundColor: Theme.cardBorder }} />
+            <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 13, color: Theme.textFaint }}>or sign up with</Text>
+            <View style={{ flex: 1, height: 1, backgroundColor: Theme.cardBorder }} />
+          </View>
+
+          {APPLE_SIGNIN_ENABLED && Platform.OS === "ios" && (
+            <TouchableOpacity onPress={handleApple} activeOpacity={0.85} style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: "#000000", borderRadius: Theme.radius.pill, paddingVertical: 15, marginBottom: 12 }}>
+              <Icon name="apple" size={18} color="#FFFFFF" />
+              <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 16, color: "#FFFFFF" }}>Continue with Apple</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={handleGoogle} activeOpacity={0.85} style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: Theme.card, borderWidth: 1, borderColor: Theme.cardBorder, borderRadius: Theme.radius.pill, paddingVertical: 15 }}>
+            <Text style={{ fontFamily: Theme.font.sansBold, fontSize: 18, color: "#4285F4" }}>G</Text>
+            <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 16, color: Theme.text }}>Continue with Google</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity onPress={() => router.push("/(auth)/login")} style={{ marginTop: 18, alignItems: "center" }}>
             <Text style={{ fontFamily: Theme.font.sans, fontSize: 14, color: Theme.textMuted }}>
               Already have an account? <Text style={{ fontFamily: Theme.font.sansSemi, color: Theme.primary }}>Log in</Text>

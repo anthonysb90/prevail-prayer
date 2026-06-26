@@ -10,9 +10,9 @@ import { AppTheme } from "@/constants/theme";
 import { Icon } from "@/components/ui/Icon";
 import { signInWithApple, signInWithGoogle } from "@/lib/socialAuth";
 
-// Apple Sign In is disabled until the App ID "Sign In with Apple" capability +
-// provisioning profile are configured (then set this to true & re-add usesAppleSignIn).
-const APPLE_SIGNIN_ENABLED = false;
+// Apple Sign In is enabled: App ID capability + Supabase Apple provider configured,
+// usesAppleSignIn + expo-apple-authentication restored.
+const APPLE_SIGNIN_ENABLED = true;
 
 const mkInput = (Theme: AppTheme) => ({
   backgroundColor: Theme.card, borderWidth: 1, borderColor: Theme.cardBorder,

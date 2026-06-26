@@ -1,15 +1,48 @@
 import * as WebBrowser from "expo-web-browser";
+import * as AppleAuthentication from "expo-apple-authentication";
 import { supabase } from "@/lib/supabase";
 
 /**
- * Apple Sign In — temporarily disabled. Re-enable by:
- *  1) npx expo install expo-apple-authentication
- *  2) app.json: ios.usesAppleSignIn = true + add the expo-apple-authentication plugin
- *  3) Apple Developer: enable "Sign In with Apple" on the App ID + regenerate provisioning
- *  4) restore the implementation below and set APPLE_SIGNIN_ENABLED = true in login.tsx
+ * Sign in with Apple — native iOS flow.
+ * The native Apple button returns an identity token (JWT) which Supabase
+ * verifies against Apple's public keys. Requires:
+ *  - "Sign In with Apple" capability enabled on App ID com.missionusa.prevailprayer
+ *  - app.json: ios.usesAppleSignIn = true + expo-apple-authentication plugin
+ *  - Supabase Apple provider enabled with the bundle ID in Authorized Client IDs
+ * No client secret is needed for the native flow.
  */
 export async function signInWithApple() {
-  throw new Error("Apple Sign In is not configured yet.");
+  const credential = await AppleAuthentication.signInAsync({
+    requestedScopes: [
+      AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+      AppleAuthentication.AppleAuthenticationScope.EMAIL,
+    ],
+  });
+  if (!credential.identityToken) {
+    throw new Error("No identity token returned from Apple.");
+  }
+  const { data, error } = await supabase.auth.signInWithIdToken({
+    provider: "apple",
+    token: credential.identityToken,
+  });
+  if (error) throw error;
+
+  // Apple only returns the full name on the very first sign-in. If present,
+  // store it on the profile so the user has a display name. Best-effort:
+  // never let a failed profile update break a successful sign-in.
+  const fullName = credential.fullName;
+  const displayName = [fullName?.givenName, fullName?.familyName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  const userId = data?.user?.id;
+  if (displayName && userId) {
+    try {
+      await supabase.from("profiles").update({ display_name: displayName }).eq("id", userId);
+    } catch {
+      // ignore — sign-in already succeeded
+    }
+  }
 }
 
 /**

@@ -17,6 +17,7 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.missionusa.prevailprayer",
       "buildNumber": "1",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -37,6 +38,7 @@
     "plugins": [
       "expo-router",
       "expo-font",
+      "expo-apple-authentication",
       [
         "expo-notifications",
         {
