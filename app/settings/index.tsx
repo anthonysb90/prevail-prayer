@@ -17,6 +17,25 @@ export default function SettingsScreen() {
     const Theme = useTheme();
   const router = useRouter();
   const { profile, signOut } = useAuthStore();
+  const { enabled: lockEnabled, setEnabled: setLockEnabled, hydrate: hydrateLock } = useAppLockStore();
+  const [bioAvailable, setBioAvailable] = useState(false);
+  const [bioLabel, setBioLabel] = useState("Face ID");
+
+  useEffect(() => {
+    hydrateLock();
+    isBiometricAvailable().then(setBioAvailable);
+    getBiometricLabel().then(setBioLabel);
+  }, []);
+
+  const toggleLock = async (next: boolean) => {
+    if (next) {
+      const ok = await authenticate(`Enable ${bioLabel} lock`);
+      if (!ok) return;
+      await setLockEnabled(true);
+    } else {
+      await setLockEnabled(false);
+    }
+  };
 
   const handleRate = async () => {
     try {
