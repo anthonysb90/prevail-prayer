@@ -6,6 +6,7 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import * as Notifications from "expo-notifications";
 import { PremiumGate } from "@/components/ui/PremiumGate";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
@@ -90,7 +91,11 @@ function RemindersContent() {
         await scheduleLocalReminder({
           title: "Prevail Prayer",
           body: notificationBody,
-          trigger: { hour: time.getHours(), minute: time.getMinutes(), repeats: true } as any,
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DAILY,
+            hour: time.getHours(),
+            minute: time.getMinutes(),
+          },
           identifier: `reminder_${reminder.id}`,
         });
       } else {
@@ -100,11 +105,11 @@ function RemindersContent() {
             title: "Prevail Prayer",
             body: notificationBody,
             trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
               weekday: dayIndex + 1, // expo uses 1=Sun
               hour: time.getHours(),
               minute: time.getMinutes(),
-              repeats: true,
-            } as any,
+            },
             identifier: `reminder_${reminder.id}_day${dayIndex}`,
           });
         }
@@ -310,6 +315,7 @@ function RemindersContent() {
                     value={time}
                     mode="time"
                     display="spinner"
+                    themeVariant="light"
                     onChange={(_, selected) => { if (selected) setTime(selected); }}
                     style={{ alignSelf: "center" }}
                   />
