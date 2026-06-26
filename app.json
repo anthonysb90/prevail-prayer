@@ -75,7 +75,9 @@
       "policy": "fingerprint"
     },
     "updates": {
-      "url": "https://u.expo.dev/2f3c446e-1398-4351-a29f-2047ea04b9d7"
+      "url": "https://u.expo.dev/2f3c446e-1398-4351-a29f-2047ea04b9d7",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 10000
     }
   }
 }
