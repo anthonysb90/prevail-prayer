@@ -11,6 +11,8 @@ import { pickAndUploadAvatar } from "@/lib/avatar";
 import { useTheme } from "@/hooks/useTheme";
 import { exportMyData } from "@/lib/exportData";
 import { formatBirthdayInput, parseBirthday, isoToMasked } from "@/lib/birthday";
+import { compExpiryLabel } from "@/lib/trial";
+import { Icon } from "@/components/ui/Icon";
 
 function formatPhone(input: string) {
   const digits = input.replace(/\D/g, "").slice(0, 10);
@@ -156,6 +158,16 @@ export default function AccountScreen() {
           <TouchableOpacity onPress={handleSave} disabled={saving} style={{ backgroundColor: Theme.primary, borderRadius: 100, paddingVertical: 16, alignItems: "center", marginBottom: 20 }}>
             {saving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 16, color: "#FFFFFF" }}>Save Changes</Text>}
           </TouchableOpacity>
+        )}
+
+        {compExpiryLabel(profile) && (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: Theme.primarySoft, borderRadius: 16, padding: 16, marginBottom: 20 }}>
+            <Icon name="sparkle" size={22} color={Theme.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 15, color: Theme.text }}>Pro — gifted by Prevail Prayer</Text>
+              <Text style={{ fontFamily: Theme.font.sans, fontSize: 13, color: Theme.textMuted, marginTop: 2 }}>{compExpiryLabel(profile)}</Text>
+            </View>
+          </View>
         )}
 
         {/* Stats */}

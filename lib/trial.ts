@@ -33,6 +33,17 @@ export function isComped(profile?: Profile | null): boolean {
   return !Number.isNaN(until) && Date.now() < until;
 }
 
+/**
+ * Human-friendly label for an active gift, e.g. "Yours for life" or
+ * "active through June 26, 2027". Returns null when not comped.
+ */
+export function compExpiryLabel(profile?: Profile | null): string | null {
+  if (!isComped(profile) || !profile?.comp_until) return null;
+  const d = new Date(profile.comp_until);
+  if (d.getFullYear() >= 2999) return "Yours for life";
+  return `active through ${d.toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}`;
+}
+
 /** Whole days remaining in the trial (0 once expired). For UI banners. */
 export function trialDaysLeft(profile?: Profile | null): number {
   const ends = trialEndsAt(profile);
