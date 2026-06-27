@@ -1,14 +1,16 @@
-import { useState, useEffect, useRef } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Alert } from "react-native";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { PremiumGate } from "@/components/ui/PremiumGate";
-import { AmbientTrack, BellInterval } from "@/types";
+import { BellInterval } from "@/types";
 import { useAuthStore } from "@/stores/authStore";
 import { useQueryClient } from "@tanstack/react-query";
 import { logPrayerSession, updatePrayerStreak } from "@/lib/streak";
 import { useSupportPrompt } from "@/hooks/useSupportPrompt";
 import { useAmbientAudio } from "@/hooks/useAmbientAudio";
+import { fetchAvailableTracks, BUNDLED_ASSETS, MusicTrackRow } from "@/lib/music";
+import { getDownloadedMap, downloadTrack, removeDownload } from "@/lib/musicDownload";
 import { useTheme } from "@/hooks/useTheme";
 import { AppTheme } from "@/constants/theme";
 import { Icon } from "@/components/ui/Icon";
@@ -19,32 +21,30 @@ const DURATIONS = [
   { label: "15 min", seconds: 900 }, { label: "20 min", seconds: 1200 },
   { label: "30 min", seconds: 1800 },
 ];
-const TRACKS: { id: AmbientTrack; label: string }[] = [
-  { id: "morning-still", label: "Morning Still" }, { id: "deep-waters", label: "Deep Waters" },
-  { id: "holy-ground", label: "Holy Grace" }, { id: "silence", label: "Silence" },
-];
 const BELL_OPTIONS: { id: BellInterval; label: string }[] = [
   { id: "off", label: "Off" }, { id: "5min", label: "Every 5 min" },
   { id: "10min", label: "Every 10 min" }, { id: "end-only", label: "At End" },
 ];
+
+const SILENCE = "silence";
 
 type Guidance = "off" | "acts" | "scripture";
 const GUIDANCE_OPTIONS: { id: Guidance; label: string }[] = [
   { id: "off", label: "None" }, { id: "acts", label: "ACTS" }, { id: "scripture", label: "Scripture" },
 ];
 const ACTS = [
-  { name: "Adoration", prompt: "Praise God for who He is — His holiness, power, and love. Worship before you ask.", verse: "\u201cHoly, holy, holy, is the LORD of hosts.\u201d \u2014 Isaiah 6:3" },
-  { name: "Confession", prompt: "Bring your sins honestly before God. Agree with Him, and receive His mercy.", verse: "\u201cIf we confess our sins, he is faithful and just to forgive us.\u201d \u2014 1 John 1:9" },
-  { name: "Thanksgiving", prompt: "Thank God for His gifts, His answers, and His daily faithfulness to you.", verse: "\u201cIn every thing give thanks.\u201d \u2014 1 Thessalonians 5:18" },
-  { name: "Supplication", prompt: "Bring your requests and the needs of others before the Lord.", verse: "\u201cLet your requests be made known unto God.\u201d \u2014 Philippians 4:6" },
+  { name: "Adoration", prompt: "Praise God for who He is — His holiness, power, and love. Worship before you ask.", verse: "“Holy, holy, holy, is the LORD of hosts.” — Isaiah 6:3" },
+  { name: "Confession", prompt: "Bring your sins honestly before God. Agree with Him, and receive His mercy.", verse: "“If we confess our sins, he is faithful and just to forgive us.” — 1 John 1:9" },
+  { name: "Thanksgiving", prompt: "Thank God for His gifts, His answers, and His daily faithfulness to you.", verse: "“In every thing give thanks.” — 1 Thessalonians 5:18" },
+  { name: "Supplication", prompt: "Bring your requests and the needs of others before the Lord.", verse: "“Let your requests be made known unto God.” — Philippians 4:6" },
 ];
 const SCRIPTURE_PROMPTS = [
-  "\u201cBe still, and know that I am God.\u201d \u2014 Psalm 46:10",
-  "\u201cThe LORD is my shepherd; I shall not want.\u201d \u2014 Psalm 23:1",
-  "\u201cCast all your care upon him; for he careth for you.\u201d \u2014 1 Peter 5:7",
-  "\u201cTrust in the LORD with all thine heart.\u201d \u2014 Proverbs 3:5",
-  "\u201cMy grace is sufficient for thee.\u201d \u2014 2 Corinthians 12:9",
-  "\u201cThey that wait upon the LORD shall renew their strength.\u201d \u2014 Isaiah 40:31",
+  "“Be still, and know that I am God.” — Psalm 46:10",
+  "“The LORD is my shepherd; I shall not want.” — Psalm 23:1",
+  "“Cast all your care upon him; for he careth for you.” — 1 Peter 5:7",
+  "“Trust in the LORD with all thine heart.” — Proverbs 3:5",
+  "“My grace is sufficient for thee.” — 2 Corinthians 12:9",
+  "“They that wait upon the LORD shall renew their strength.” — Isaiah 40:31",
 ];
 function formatTime(seconds: number) {
   const m = Math.floor(seconds / 60).toString().padStart(2, "0");
@@ -58,15 +58,14 @@ const mkLabel = (Theme: AppTheme) => ({
 });
 
 function TimerContent() {
-    const Theme = useTheme();
-    const label = mkLabel(Theme);
+  const Theme = useTheme();
+  const label = mkLabel(Theme);
   const router = useRouter();
   const { user } = useAuthStore();
   const qc = useQueryClient();
   const { checkAndShow } = useSupportPrompt();
 
   const [duration, setDuration] = useState(300);
-  const [track, setTrack] = useState<AmbientTrack>("morning-still");
   const [bellInterval, setBellInterval] = useState<BellInterval>("end-only");
   const [guidance, setGuidance] = useState<Guidance>("off");
   const [running, setRunning] = useState(false);
@@ -74,10 +73,42 @@ function TimerContent() {
   const [completed, setCompleted] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Admin-managed music
+  const [tracks, setTracks] = useState<MusicTrackRow[]>([]);
+  const [selectedId, setSelectedId] = useState<string>(SILENCE);
+  const [downloads, setDownloads] = useState<Record<string, string>>({});
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
 
-  useAmbientAudio(track, bellInterval, running, remaining, duration);
+  // Load the available tracks + any offline downloads once.
+  useEffect(() => {
+    let active = true;
+    fetchAvailableTracks().then((rows) => {
+      if (!active) return;
+      setTracks(rows);
+      if (rows.length > 0) setSelectedId(rows[0].id);
+    });
+    getDownloadedMap().then((m) => { if (active) setDownloads(m); });
+    return () => { active = false; };
+  }, []);
+
+  // Resolve the playable source for the current selection.
+  const { source, sourceId } = useMemo<{ source: number | { uri: string } | null; sourceId: string }>(() => {
+    if (selectedId === SILENCE) return { source: null, sourceId: SILENCE };
+    const t = tracks.find((x) => x.id === selectedId);
+    if (!t) return { source: null, sourceId: SILENCE };
+    if (t.is_bundled && t.bundle_key && BUNDLED_ASSETS[t.bundle_key]) {
+      return { source: BUNDLED_ASSETS[t.bundle_key], sourceId: "bundle:" + t.bundle_key };
+    }
+    const local = downloads[t.id];
+    if (local) return { source: { uri: local }, sourceId: "local:" + t.id };
+    if (t.file_url) return { source: { uri: t.file_url }, sourceId: "remote:" + t.id };
+    return { source: null, sourceId: SILENCE };
+  }, [selectedId, tracks, downloads]);
+
+  useAmbientAudio(sourceId, source, bellInterval, running, remaining, duration);
   useEffect(() => { setRemaining(duration); }, [duration]);
 
   useEffect(() => {
@@ -97,9 +128,9 @@ function TimerContent() {
     setSaving(true);
     try {
       const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000);
-      const sessionCount = await logPrayerSession(user.id, elapsed, track);
+      const sessionCount = await logPrayerSession(user.id, elapsed, selectedId);
       await updatePrayerStreak(user.id);
-      analytics.capture("prayer_session_completed", { duration_seconds: elapsed, track, bell: bellInterval, guidance });
+      analytics.capture("prayer_session_completed", { duration_seconds: elapsed, track: selectedId, bell: bellInterval, guidance });
       qc.invalidateQueries({ queryKey: ["prayer_requests", user.id, "counts"] });
       await checkAndShow("session_completed", sessionCount);
     } catch {}
@@ -115,6 +146,19 @@ function TimerContent() {
         { text: "End", style: "destructive" },
       ]);
     }
+  };
+
+  const handleDownload = (t: MusicTrackRow) => {
+    if (!t.file_url) return;
+    setDownloadingId(t.id);
+    downloadTrack(t.id, t.file_url).then((uri) => {
+      if (uri) setDownloads((d) => ({ ...d, [t.id]: uri }));
+      else Alert.alert("Download failed", "Could not download this track. Please try again.");
+      setDownloadingId(null);
+    });
+  };
+  const handleRemoveDownload = (t: MusicTrackRow) => {
+    removeDownload(t.id).then(() => setDownloads((d) => { const n = { ...d }; delete n[t.id]; return n; }));
   };
 
   const rowStyle = (on: boolean) => ({
@@ -187,12 +231,39 @@ function TimerContent() {
         </View>
 
         <Text style={label}>Ambient Sound</Text>
-        {TRACKS.map((t) => (
-          <TouchableOpacity key={t.id} onPress={() => setTrack(t.id)} style={rowStyle(track === t.id)}>
-            <Text style={{ color: Theme.darkText, fontFamily: Theme.font.sans, fontSize: 15 }}>{t.label}</Text>
-            {track === t.id && <Icon name="check" size={18} color={Theme.accentOnDark} />}
-          </TouchableOpacity>
-        ))}
+        {tracks.map((t) => {
+          const on = selectedId === t.id;
+          const dl = !!downloads[t.id];
+          const downloading = downloadingId === t.id;
+          return (
+            <TouchableOpacity key={t.id} onPress={() => setSelectedId(t.id)} style={rowStyle(on)}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: Theme.darkText, fontFamily: Theme.font.sans, fontSize: 15 }}>{t.title}</Text>
+                {t.artist ? <Text style={{ color: Theme.darkMuted, fontFamily: Theme.font.sans, fontSize: 12, marginTop: 2 }}>{t.artist}</Text> : null}
+              </View>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+                {!t.is_bundled && (
+                  downloading ? (
+                    <ActivityIndicator size="small" color={Theme.accentOnDark} />
+                  ) : dl ? (
+                    <TouchableOpacity onPress={() => handleRemoveDownload(t)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                      <Text style={{ color: Theme.accentOnDark, fontFamily: Theme.font.sansMed, fontSize: 12 }}>Saved</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity onPress={() => handleDownload(t)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                      <Text style={{ color: Theme.darkMuted, fontFamily: Theme.font.sansMed, fontSize: 12 }}>Download</Text>
+                    </TouchableOpacity>
+                  )
+                )}
+                {on && <Icon name="check" size={18} color={Theme.accentOnDark} />}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+        <TouchableOpacity onPress={() => setSelectedId(SILENCE)} style={rowStyle(selectedId === SILENCE)}>
+          <Text style={{ color: Theme.darkText, fontFamily: Theme.font.sans, fontSize: 15 }}>Silence</Text>
+          {selectedId === SILENCE && <Icon name="check" size={18} color={Theme.accentOnDark} />}
+        </TouchableOpacity>
 
         <Text style={[label, { marginTop: 8 }]}>Bell Interval</Text>
         {BELL_OPTIONS.map((b) => (
