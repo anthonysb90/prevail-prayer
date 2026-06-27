@@ -13,7 +13,7 @@ import type { PurchasesPackage } from "react-native-purchases";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { Icon } from "@/components/ui/Icon";
 import { BrandMark } from "@/components/ui/BrandMark";
-import { getOfferings, purchasePackage, restorePurchases } from "@/lib/purchases";
+import { getOfferings, purchasePackage, restorePurchases, BIRTHDAY_OFFERING_ID } from "@/lib/purchases";
 
 const PREMIUM_FEATURES = [
   { icon: "book-outline", title: "Prayer Journal", description: "Reflect and record what God is doing" },
@@ -50,7 +50,8 @@ function tierMeta(pkg: PurchasesPackage) {
 }
 
 export function PaywallScreen() {
-  const { paywallVisible, hidePaywall, setIsPremium } = useSubscriptionStore();
+  const { paywallVisible, hidePaywall, setIsPremium, paywallContext } = useSubscriptionStore();
+  const isBirthday = paywallContext === "birthday";
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [selected, setSelected] = useState<PurchasesPackage | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,7 +64,7 @@ export function PaywallScreen() {
 
     async function load() {
       setLoading(true);
-      const offering = await getOfferings();
+      const offering = await getOfferings(isBirthday ? BIRTHDAY_OFFERING_ID : undefined);
       if (!active) return;
       const pkgs = (offering?.availablePackages ?? [])
         .slice()
@@ -79,7 +80,7 @@ export function PaywallScreen() {
     return () => {
       active = false;
     };
-  }, [paywallVisible]);
+  }, [paywallVisible, isBirthday]);
 
   const ctaLabel = (() => {
     if (!selected) return "Continue";
@@ -136,6 +137,15 @@ export function PaywallScreen() {
           contentContainerStyle={{ paddingHorizontal: 28, paddingBottom: 48 }}
           showsVerticalScrollIndicator={false}
         >
+          {isBirthday && (
+            <View style={{ backgroundColor: "#FFF4D6", borderRadius: 16, paddingVertical: 14, paddingHorizontal: 18, marginBottom: 18, flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <Icon name="cake" size={22} color="#B26B00" />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 15, color: "#7A4A00" }}>Happy Birthday! Treat yourself to Pro</Text>
+                <Text style={{ fontFamily: "HankenGrotesk_400Regular", fontSize: 13, color: "#9A6A1A", marginTop: 2 }}>A special birthday price, just for today.</Text>
+              </View>
+            </View>
+          )}
           {/* Header */}
           <View style={{ alignItems: "center", marginTop: 8, marginBottom: 24 }}>
             <View

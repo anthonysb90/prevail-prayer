@@ -89,7 +89,7 @@ export function PremiumGate({
         </Text>
 
         <TouchableOpacity
-          onPress={showPaywall}
+          onPress={() => showPaywall()}
           style={{
             backgroundColor: "#5B53C6",
             borderRadius: 100,
@@ -110,7 +110,7 @@ export function PremiumGate({
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={showPaywall}>
+        <TouchableOpacity onPress={() => showPaywall()}>
           <Text
             style={{
               fontFamily: "HankenGrotesk_400Regular",

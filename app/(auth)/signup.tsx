@@ -10,6 +10,7 @@ import { AppTheme } from "@/constants/theme";
 import { Icon } from "@/components/ui/Icon";
 import { analytics } from "@/lib/analytics";
 import { signInWithApple, signInWithGoogle } from "@/lib/socialAuth";
+import { formatBirthdayInput, parseBirthday } from "@/lib/birthday";
 
 // Mirrors login.tsx: Apple Sign In is enabled now that the App ID capability +
 // Supabase Apple provider are configured.
@@ -30,6 +31,7 @@ export default function SignupScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [birthday, setBirthday] = useState("");
   const [loading, setLoading] = useState(false);
   const [confirmSent, setConfirmSent] = useState(false);
 
@@ -43,11 +45,18 @@ export default function SignupScreen() {
     if (password.length < 8) {
       return Alert.alert("Password", "Password must be at least 8 characters.");
     }
+    // Birthday is optional. If provided, it must be valid.
+    let birthdayIso: string | null = null;
+    if (birthday.trim()) {
+      const parsed = parseBirthday(birthday);
+      if (parsed.error) return Alert.alert("Birthday", parsed.error);
+      birthdayIso = parsed.iso;
+    }
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { display_name: displayName.trim() } },
+      options: { data: { display_name: displayName.trim(), birthday: birthdayIso } },
     });
     if (error) {
       Alert.alert("Sign up failed", error.message);
@@ -99,6 +108,11 @@ export default function SignupScreen() {
             <View>
               <Text style={lbl}>Your Name</Text>
               <TextInput style={input as any} placeholder="What should we call you?" placeholderTextColor={Theme.textFaint} value={displayName} onChangeText={setDisplayName} autoCapitalize="words" />
+            </View>
+            <View>
+              <Text style={lbl}>Birthday <Text style={{ color: Theme.textFaint }}>(optional)</Text></Text>
+              <TextInput style={input as any} placeholder="MM/DD/YYYY" placeholderTextColor={Theme.textFaint} value={birthday} onChangeText={(t) => setBirthday(formatBirthdayInput(t))} keyboardType="number-pad" maxLength={10} />
+              <Text style={{ fontFamily: Theme.font.sans, fontSize: 12, color: Theme.textFaint, marginTop: 6 }}>So we can celebrate your birthday with you.</Text>
             </View>
             <View>
               <Text style={lbl}>Email</Text>

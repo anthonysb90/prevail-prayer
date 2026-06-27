@@ -81,11 +81,19 @@ export async function getSubscriptionStatus(): Promise<boolean> {
   }
 }
 
-/** Returns the current offering; its availablePackages drive the paywall. */
-export async function getOfferings(): Promise<PurchasesOffering | null> {
+/** RevenueCat offering shown for the birthday upgrade deal. */
+export const BIRTHDAY_OFFERING_ID = "birthday";
+
+/**
+ * Returns an offering whose availablePackages drive the paywall.
+ * Pass an offeringId to request a specific offering (e.g. the birthday deal);
+ * falls back to the current offering if that offering isn't configured.
+ */
+export async function getOfferings(offeringId?: string): Promise<PurchasesOffering | null> {
   if (!configured) return null;
   try {
     const offerings = await Purchases.getOfferings();
+    if (offeringId && offerings.all?.[offeringId]) return offerings.all[offeringId];
     return offerings.current ?? null;
   } catch (e) {
     console.warn("getOfferings failed:", e);

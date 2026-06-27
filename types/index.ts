@@ -6,6 +6,7 @@ export interface Profile {
   avatar_url: string | null;
   phone: string | null;
   zip_code: string | null;
+  birthday: string | null; // ISO date "YYYY-MM-DD"
   walk_with_god: string[] | null;
   theme_pref: "system" | "light" | "dark";
   prayer_streak: number;

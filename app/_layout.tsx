@@ -24,6 +24,8 @@ import { registerPushToken } from "@/lib/notifications";
 import { SupportPromptModal } from "@/components/ui/SupportPromptModal";
 import { TrialWelcomeModal } from "@/components/ui/TrialWelcomeModal";
 import { PhonePromptModal } from "@/components/ui/PhonePromptModal";
+import { BirthdayPromptModal } from "@/components/ui/BirthdayPromptModal";
+import { BirthdayNotificationHandler } from "@/components/ui/BirthdayNotificationHandler";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -188,6 +190,8 @@ export default function RootLayout() {
       <SupportPromptModal />
       <TrialWelcomeModal />
       <PhonePromptModal />
+      <BirthdayPromptModal />
+      <BirthdayNotificationHandler />
       <LockGate />
     </PersistQueryClientProvider>
   );

@@ -10,6 +10,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { pickAndUploadAvatar } from "@/lib/avatar";
 import { useTheme } from "@/hooks/useTheme";
 import { exportMyData } from "@/lib/exportData";
+import { formatBirthdayInput, parseBirthday, isoToMasked } from "@/lib/birthday";
 
 function formatPhone(input: string) {
   const digits = input.replace(/\D/g, "").slice(0, 10);
@@ -27,6 +28,7 @@ export default function AccountScreen() {
 
   const [displayName, setDisplayName] = useState(profile?.display_name ?? "");
   const [phone, setPhone] = useState(profile?.phone ? formatPhone(profile.phone) : "");
+  const [birthday, setBirthday] = useState(isoToMasked(profile?.birthday));
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -35,7 +37,8 @@ export default function AccountScreen() {
   const phoneValid = phoneDigits.length === 0 || phoneDigits.length === 10;
   const hasChanges =
     displayName.trim() !== (profile?.display_name ?? "") ||
-    phoneDigits !== (profile?.phone ?? "");
+    phoneDigits !== (profile?.phone ?? "") ||
+    birthday !== isoToMasked(profile?.birthday);
 
   const cardStyle = { backgroundColor: Theme.card, borderRadius: 20, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: Theme.cardBorder } as const;
   const fieldStyle = { backgroundColor: Theme.bg, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontFamily: Theme.font.sans, fontSize: 16, color: Theme.text, marginBottom: 16 } as const;
@@ -44,10 +47,17 @@ export default function AccountScreen() {
   const handleSave = async () => {
     if (!user || !displayName.trim()) return;
     if (!phoneValid) { Alert.alert("Check your details", "Phone must be 10 digits."); return; }
+    let birthdayIso: string | null = null;
+    if (birthday.trim()) {
+      const parsed = parseBirthday(birthday);
+      if (parsed.error) { Alert.alert("Birthday", parsed.error); return; }
+      birthdayIso = parsed.iso;
+    }
     setSaving(true);
     const { error } = await supabase.from("profiles").update({
       display_name: displayName.trim(),
       phone: phoneDigits.length === 10 ? phoneDigits : null,
+      birthday: birthdayIso,
     }).eq("id", user.id);
     if (error) Alert.alert("Error", error.message);
     else { await fetchProfile(user.id); Alert.alert("Saved", "Your profile has been updated."); }
@@ -132,6 +142,9 @@ export default function AccountScreen() {
 
           <Text style={labelStyle}>Phone Number</Text>
           <TextInput value={phone} onChangeText={(t) => setPhone(formatPhone(t))} keyboardType="phone-pad" style={fieldStyle} placeholder="(555) 123-4567" placeholderTextColor={Theme.textFaint} />
+
+          <Text style={labelStyle}>Birthday</Text>
+          <TextInput value={birthday} onChangeText={(t) => setBirthday(formatBirthdayInput(t))} keyboardType="number-pad" maxLength={10} style={fieldStyle} placeholder="MM/DD/YYYY" placeholderTextColor={Theme.textFaint} />
 
           <Text style={labelStyle}>Email</Text>
           <View style={{ backgroundColor: Theme.bg, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14 }}>
