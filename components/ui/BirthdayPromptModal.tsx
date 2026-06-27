@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, Modal, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, Modal, Alert, KeyboardAvoidingView, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
@@ -59,7 +59,10 @@ export function BirthdayPromptModal() {
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={dismiss}>
-      <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.45)" }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.45)" }}
+      >
         <View style={{ backgroundColor: Theme.bg, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, paddingBottom: 44 }}>
           <View style={{ alignItems: "center", marginBottom: 18 }}>
             <View style={{ width: 56, height: 56, borderRadius: 18, backgroundColor: Theme.primary, alignItems: "center", justifyContent: "center" }}>
@@ -86,7 +89,7 @@ export function BirthdayPromptModal() {
             <Text style={{ fontFamily: Theme.font.sans, fontSize: 14, color: Theme.textFaint }}>Not now</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
