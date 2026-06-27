@@ -90,17 +90,21 @@ export default function AccountScreen() {
     ]);
   };
 
-  const handleCloseAccount = () => {
+  const handleDeleteAccount = () => {
     Alert.alert(
-      "Close Account",
-      "Your account will be closed and you'll be signed out. We keep your email and records on file for ministry follow-up; you can reopen by contacting support. Export your data first if you'd like a copy.",
+      "Delete Account",
+      "This permanently deletes your account and your data — your prayer list, journal, and history. This can't be undone. We keep only your email address on file. Export your data first if you'd like a copy.",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Close Account", style: "destructive",
+          text: "Delete Account", style: "destructive",
           onPress: async () => {
             if (!user) return;
-            await supabase.from("profiles").update({ deactivated_at: new Date().toISOString() }).eq("id", user.id);
+            const { error } = await supabase.functions.invoke("delete-account");
+            if (error) {
+              Alert.alert("Could not delete account", "Something went wrong. Please try again, or contact support@prevailprayer.com.");
+              return;
+            }
             await signOut();
           },
         },
@@ -198,9 +202,9 @@ export default function AccountScreen() {
             <Ionicons name="log-out-outline" size={20} color={Theme.urgent} style={{ marginRight: 12 }} />
             <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 15, color: Theme.urgent, flex: 1 }}>Sign Out</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleCloseAccount} style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 16 }}>
-            <Ionicons name="close-circle-outline" size={20} color={Theme.textFaint} style={{ marginRight: 12 }} />
-            <Text style={{ fontFamily: Theme.font.sans, fontSize: 15, color: Theme.textMuted, flex: 1 }}>Close Account</Text>
+          <TouchableOpacity onPress={handleDeleteAccount} style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 16 }}>
+            <Ionicons name="trash-outline" size={20} color={Theme.urgent} style={{ marginRight: 12 }} />
+            <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 15, color: Theme.urgent, flex: 1 }}>Delete Account</Text>
           </TouchableOpacity>
         </View>
 
