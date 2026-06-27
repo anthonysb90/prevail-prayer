@@ -17,7 +17,7 @@ import { LockScreen } from "@/components/ui/LockScreen";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
 import { initializePurchases, getSubscriptionStatus } from "@/lib/purchases";
-import { isTrialActive } from "@/lib/trial";
+import { isTrialActive, isComped } from "@/lib/trial";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { PaywallScreen } from "@/components/ui/PaywallScreen";
 import { registerPushToken } from "@/lib/notifications";
@@ -26,6 +26,7 @@ import { TrialWelcomeModal } from "@/components/ui/TrialWelcomeModal";
 import { PhonePromptModal } from "@/components/ui/PhonePromptModal";
 import { BirthdayPromptModal } from "@/components/ui/BirthdayPromptModal";
 import { BirthdayNotificationHandler } from "@/components/ui/BirthdayNotificationHandler";
+import { GiftCelebrationModal } from "@/components/ui/GiftCelebrationModal";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -98,7 +99,7 @@ function AuthGuard() {
           // Initialize RevenueCat
           await initializePurchases(session.user.id);
           const premium = await getSubscriptionStatus();
-          setIsPremium(premium || isTrialActive(useAuthStore.getState().profile));
+          setIsPremium(premium || isTrialActive(useAuthStore.getState().profile) || isComped(useAuthStore.getState().profile));
           // Register push token — saves to Supabase so admin panel can send notifications
           await registerPushToken(session.user.id);
           setIsLoading(false);
@@ -192,6 +193,7 @@ export default function RootLayout() {
       <PhonePromptModal />
       <BirthdayPromptModal />
       <BirthdayNotificationHandler />
+      <GiftCelebrationModal />
       <LockGate />
     </PersistQueryClientProvider>
   );

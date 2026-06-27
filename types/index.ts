@@ -7,6 +7,7 @@ export interface Profile {
   phone: string | null;
   zip_code: string | null;
   birthday: string | null; // ISO date "YYYY-MM-DD"
+  comp_until: string | null; // admin-gifted Pro; ISO timestamp (far-future = lifetime)
   walk_with_god: string[] | null;
   theme_pref: "system" | "light" | "dark";
   prayer_streak: number;

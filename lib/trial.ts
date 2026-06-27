@@ -22,6 +22,17 @@ export function isTrialActive(profile?: Profile | null): boolean {
   return !!ends && Date.now() < ends.getTime();
 }
 
+/**
+ * True when an admin has gifted ("comped") this user Pro and it hasn't expired.
+ * comp_until holds the expiry; a far-future date (set by the admin "Lifetime"
+ * option) effectively never expires.
+ */
+export function isComped(profile?: Profile | null): boolean {
+  if (!profile?.comp_until) return false;
+  const until = new Date(profile.comp_until).getTime();
+  return !Number.isNaN(until) && Date.now() < until;
+}
+
 /** Whole days remaining in the trial (0 once expired). For UI banners. */
 export function trialDaysLeft(profile?: Profile | null): number {
   const ends = trialEndsAt(profile);
