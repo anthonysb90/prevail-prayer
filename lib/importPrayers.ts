@@ -1,4 +1,5 @@
 import * as FileSystem from "expo-file-system/legacy";
+import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { supabase } from "@/lib/supabase";
 
 export interface ImportItem {
@@ -28,6 +29,25 @@ function mediaTypeFromUri(uri: string): string {
   return "image/jpeg";
 }
 
+/**
+ * Read a picked image as base64, re-encoding to JPEG first. iOS photos are often
+ * HEIC, which Anthropic's API rejects (it only accepts jpeg/png/gif/webp).
+ * Transcoding to JPEG makes every provider accept the image and shrinks the
+ * payload. Falls back to the raw bytes if manipulation fails.
+ */
+async function readImageAsJpeg(uri: string): Promise<{ data: string; media_type: string }> {
+  try {
+    const context = ImageManipulator.manipulate(uri);
+    const rendered = await context.renderAsync();
+    const out = await rendered.saveAsync({ compress: 0.6, format: SaveFormat.JPEG, base64: true });
+    if (out.base64) return { data: out.base64, media_type: "image/jpeg" };
+  } catch (_e) {
+    // fall through to the raw read below
+  }
+  const data = await FileSystem.readAsStringAsync(uri, { encoding: "base64" });
+  return { data, media_type: mediaTypeFromUri(uri) };
+}
+
 async function readError(error: unknown): Promise<{ error?: string; code?: string; remaining?: ImportResult["remaining"] }> {
   try {
     const ctx = (error as { context?: { json?: () => Promise<unknown> } })?.context;
@@ -55,8 +75,7 @@ export async function importFromPhotos(uris: string[], claim: ImportClaim): Prom
   try {
     const images: { data: string; media_type: string }[] = [];
     for (const uri of uris.slice(0, 3)) {
-      const data = await FileSystem.readAsStringAsync(uri, { encoding: "base64" });
-      images.push({ data, media_type: mediaTypeFromUri(uri) });
+      images.push(await readImageAsJpeg(uri));
     }
     const { data, error } = await invokeImport({ mode: "photo", images, premium: claim.premium, trial: claim.trial });
     if (error) return { items: [], ...(await readError(error)) };
