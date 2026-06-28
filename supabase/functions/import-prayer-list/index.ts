@@ -17,9 +17,11 @@
 //   ANTHROPIC_API_KEY                        (your Anthropic API key)
 //   REVENUECAT_SECRET_KEY                    (RevenueCat secret API key; needed
 //                                             to verify non-comped Pro users)
-// Optional:
-//   ANTHROPIC_VISION_MODEL  (default "claude-3-5-sonnet-latest")
-//   ANTHROPIC_TEXT_MODEL    (default "claude-3-5-haiku-latest")
+//   GEMINI_API_KEY                           (Google Gemini API key; only needed
+//                                             if a mode is set to a Gemini model)
+// Optional (overridden by the ai_settings table when a row exists):
+//   ANTHROPIC_VISION_MODEL  (default "claude-sonnet-4-6")
+//   ANTHROPIC_TEXT_MODEL    (default "claude-haiku-4-5-20251001")
 //
 // Deploy with JWT verification ON (default) so only signed-in users can call it.
 
@@ -64,8 +66,8 @@ Deno.serve(async (req: Request) => {
     const token = authHeader.replace(/^Bearer\s+/i, "").trim();
     if (!token) return json({ error: "Not authenticated." }, 401);
 
-    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!anthropicKey) return json({ error: "AI import is not configured yet. (Missing ANTHROPIC_API_KEY.)" }, 500);
+    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY") || "";
+    const geminiKey = Deno.env.get("GEMINI_API_KEY") || "";
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -108,42 +110,39 @@ Deno.serve(async (req: Request) => {
       return json({ error: "You've reached this month's text import limit.", code: "quota" }, 429);
     }
 
-    // ---- Build the Anthropic request --------------------------------------
-    let model: string;
-    const content: unknown[] = [];
+    // ---- Build + send the request -----------------------------------------
+    // Which provider + model each mode uses is admin-configurable via the
+    // ai_settings table (so models/providers can be swapped as cheaper or
+    // better ones ship), falling back to env overrides, then to defaults.
+    const models = await getModels(admin);
+    const sel = mode === "photo" ? models.vision : models.text;
 
+    let images: ImageInput[] = [];
+    let promptText = PROMPT;
     if (mode === "photo") {
-      const images: ImageInput[] = Array.isArray(payload?.images) ? payload.images.slice(0, MAX_IMAGES) : [];
+      images = Array.isArray(payload?.images) ? payload.images.slice(0, MAX_IMAGES) : [];
       if (images.length === 0) return json({ error: "No images provided." }, 400);
-      model = Deno.env.get("ANTHROPIC_VISION_MODEL") || "claude-3-5-sonnet-latest";
-      for (const img of images) {
-        if (!img?.data) continue;
-        content.push({ type: "image", source: { type: "base64", media_type: img.media_type || "image/jpeg", data: img.data } });
-      }
-      content.push({ type: "text", text: PROMPT });
     } else {
       const text: string = typeof payload?.text === "string" ? payload.text.slice(0, MAX_TEXT_CHARS).trim() : "";
       if (!text) return json({ error: "No text provided." }, 400);
-      model = Deno.env.get("ANTHROPIC_TEXT_MODEL") || "claude-3-5-haiku-latest";
-      content.push({ type: "text", text: PROMPT + "\n\nHere is the list:\n\n" + text });
+      promptText = PROMPT + "\n\nHere is the list:\n\n" + text;
     }
 
-    // ---- Call Anthropic ----------------------------------------------------
-    const aiResp = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": anthropicKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model, max_tokens: 1500, messages: [{ role: "user", content }] }),
-    });
+    const provider = sel.provider === "gemini" ? "gemini" : "anthropic";
+    const key = provider === "gemini" ? geminiKey : anthropicKey;
+    if (!key) {
+      return json({
+        error: provider === "gemini"
+          ? "AI import isn't configured yet. (Missing GEMINI_API_KEY.)"
+          : "AI import isn't configured yet. (Missing ANTHROPIC_API_KEY.)",
+      }, 500);
+    }
 
-    if (!aiResp.ok) {
-      const detail = await aiResp.text().catch(() => "");
-      console.error("Anthropic error", aiResp.status, detail);
+    const result = await callModel(provider, sel.model, images, promptText, key);
+    if (!result.ok) {
       return json({ error: "The AI couldn't read that. Please try a clearer photo or paste the text." }, 502);
     }
-
-    const aiJson = await aiResp.json();
-    const rawText: string = (aiJson?.content ?? []).map((b: { text?: string }) => b?.text ?? "").join("").trim();
-    const items = parseItems(rawText);
+    const items = parseItems(result.rawText);
     if (items.length === 0) {
       return json({ error: "No prayer requests were found. Try a clearer image or paste the text.", items: [] }, 200);
     }
@@ -161,7 +160,7 @@ Deno.serve(async (req: Request) => {
     );
 
     // Self-tracked AI cost (best effort; never blocks the response).
-    await logAiCost(admin, userId, mode, aiJson);
+    await logAiCost(admin, userId, mode, sel.model, result.usage);
 
     const remaining = mode === "photo"
       ? { photo: Math.max(0, photoCap - (photoUsed + 1)), photoCap }
@@ -173,6 +172,90 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Something went wrong. Please try again." }, 500);
   }
 });
+
+interface ModelSel { provider: string; model: string; }
+interface ModelResult { ok: boolean; status: number; rawText: string; usage: { input: number; output: number }; }
+
+// Which provider + model each mode uses. Admin-configurable via the single-row
+// ai_settings table; falls back to env overrides, then to current defaults.
+async function getModels(
+  admin: ReturnType<typeof createClient>,
+): Promise<{ vision: ModelSel; text: ModelSel }> {
+  const fallback = {
+    vision: { provider: "anthropic", model: Deno.env.get("ANTHROPIC_VISION_MODEL") || "claude-sonnet-4-6" },
+    text: { provider: "anthropic", model: Deno.env.get("ANTHROPIC_TEXT_MODEL") || "claude-haiku-4-5-20251001" },
+  };
+  try {
+    const { data } = await admin
+      .from("ai_settings")
+      .select("vision_provider, vision_model, text_provider, text_model")
+      .limit(1)
+      .maybeSingle();
+    const pick = (p?: string, m?: string, fb?: ModelSel): ModelSel => ({
+      provider: (p as string | undefined)?.trim() || fb!.provider,
+      model: (m as string | undefined)?.trim() || fb!.model,
+    });
+    return {
+      vision: pick(data?.vision_provider, data?.vision_model, fallback.vision),
+      text: pick(data?.text_provider, data?.text_model, fallback.text),
+    };
+  } catch (_e) {
+    return fallback;
+  }
+}
+
+// Provider-neutral call. Returns extracted text + normalized token usage.
+async function callModel(provider: string, model: string, images: ImageInput[], promptText: string, key: string): Promise<ModelResult> {
+  return provider === "gemini"
+    ? callGemini(model, images, promptText, key)
+    : callAnthropic(model, images, promptText, key);
+}
+
+async function callAnthropic(model: string, images: ImageInput[], promptText: string, key: string): Promise<ModelResult> {
+  const content: unknown[] = [];
+  for (const img of images) {
+    if (!img?.data) continue;
+    content.push({ type: "image", source: { type: "base64", media_type: img.media_type || "image/jpeg", data: img.data } });
+  }
+  content.push({ type: "text", text: promptText });
+
+  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+    body: JSON.stringify({ model, max_tokens: 1500, messages: [{ role: "user", content }] }),
+  });
+  if (!resp.ok) {
+    console.error("Anthropic error", resp.status, await resp.text().catch(() => ""));
+    return { ok: false, status: resp.status, rawText: "", usage: { input: 0, output: 0 } };
+  }
+  const j = await resp.json();
+  const rawText: string = (j?.content ?? []).map((b: { text?: string }) => b?.text ?? "").join("").trim();
+  return { ok: true, status: 200, rawText, usage: { input: j?.usage?.input_tokens ?? 0, output: j?.usage?.output_tokens ?? 0 } };
+}
+
+async function callGemini(model: string, images: ImageInput[], promptText: string, key: string): Promise<ModelResult> {
+  const parts: unknown[] = [];
+  for (const img of images) {
+    if (!img?.data) continue;
+    parts.push({ inline_data: { mime_type: img.media_type || "image/jpeg", data: img.data } });
+  }
+  parts.push({ text: promptText });
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ contents: [{ parts }], generationConfig: { maxOutputTokens: 1500, temperature: 0 } }),
+  });
+  if (!resp.ok) {
+    console.error("Gemini error", resp.status, await resp.text().catch(() => ""));
+    return { ok: false, status: resp.status, rawText: "", usage: { input: 0, output: 0 } };
+  }
+  const j = await resp.json();
+  const rawText: string = (j?.candidates?.[0]?.content?.parts ?? []).map((p: { text?: string }) => p?.text ?? "").join("").trim();
+  const um = j?.usageMetadata ?? {};
+  return { ok: true, status: 200, rawText, usage: { input: um.promptTokenCount ?? 0, output: um.candidatesTokenCount ?? 0 } };
+}
 
 // Caller tier: admin comp (paid-equivalent), an active RevenueCat entitlement
 // (trial vs paid via period_type), or none.
@@ -210,9 +293,13 @@ async function callerTier(
 }
 
 // Fallback prices (USD per 1M tokens) if a model has no ai_model_prices row.
+// Longer/more specific keys first so substring matching picks the right row
+// (e.g. "gemini-2.5-flash-lite" before "gemini-2.5-flash").
 const PRICE_DEFAULTS: { key: string; in: number; out: number }[] = [
-  { key: "claude-3-5-sonnet", in: 3, out: 15 },
-  { key: "claude-3-5-haiku", in: 0.8, out: 4 },
+  { key: "claude-sonnet-4", in: 3, out: 15 },
+  { key: "claude-haiku-4", in: 1, out: 5 },
+  { key: "gemini-2.5-flash-lite", in: 0.1, out: 0.4 },
+  { key: "gemini-2.5-flash", in: 0.3, out: 2.5 },
 ];
 
 // Record one call's token cost into ai_cost_log using editable per-model prices.
@@ -220,12 +307,12 @@ async function logAiCost(
   admin: ReturnType<typeof createClient>,
   userId: string,
   mode: string,
-  aiJson: { usage?: { input_tokens?: number; output_tokens?: number }; model?: string },
+  model: string,
+  usage: { input: number; output: number },
 ): Promise<void> {
   try {
-    const inTok = aiJson?.usage?.input_tokens ?? 0;
-    const outTok = aiJson?.usage?.output_tokens ?? 0;
-    const model = aiJson?.model ?? (mode === "text" ? "claude-3-5-haiku" : "claude-3-5-sonnet");
+    const inTok = usage?.input ?? 0;
+    const outTok = usage?.output ?? 0;
 
     let inPrice = 0;
     let outPrice = 0;

@@ -28,9 +28,9 @@ export default function TabLayout() {
             backgroundColor: Theme.card,
             borderTopColor: Theme.cardBorder,
             borderTopWidth: 1,
-            paddingBottom: 8,
-            paddingTop: 8,
-            height: 70,
+            paddingBottom: 22,
+            paddingTop: 10,
+            height: 88,
           },
           tabBarActiveTintColor: Theme.primary,
           tabBarInactiveTintColor: Theme.textFaint,
@@ -113,7 +113,7 @@ export default function TabLayout() {
             <View style={{ alignSelf: "center", width: 40, height: 4, borderRadius: 2, backgroundColor: Theme.cardBorder, marginBottom: 14 }} />
             <AddOption Theme={Theme} icon="plus" title="New prayer request" subtitle="Add one request yourself" onPress={() => go("/prayer/new")} />
             <AddOption Theme={Theme} icon="image" title="Import from photo" subtitle="Snap a church prayer list — AI reads it" onPress={() => go("/prayer/import?tab=photo")} />
-            <AddOption Theme={Theme} icon="note" title="Import from text" subtitle="Paste a list — free, no scan limit" onPress={() => go("/prayer/import?tab=text")} />
+            <AddOption Theme={Theme} icon="text" title="Import from text" subtitle="Paste a list — free, no scan limit" onPress={() => go("/prayer/import?tab=text")} />
           </Pressable>
         </Pressable>
       </Modal>

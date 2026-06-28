@@ -64,6 +64,7 @@ export default function SettingsScreen() {
     { label: "Account", icon: "user", onPress: () => router.push("/settings/account") },
     { label: "Devotions", icon: "book", onPress: () => router.push("/devotions") },
     { label: "Theme", icon: "moon", onPress: () => router.push("/settings/theme") },
+    { label: "Send Feedback", icon: "quote", onPress: () => router.push("/settings/feedback") },
     { label: "Rate the App", icon: "sparkle", onPress: handleRate },
     { label: "Share with a Friend", icon: "share", onPress: handleShare },
     { label: "Support Prevail Prayer", icon: "heart", onPress: handleSupport },

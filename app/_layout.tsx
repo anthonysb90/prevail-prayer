@@ -21,6 +21,7 @@ import { isTrialActive, isComped } from "@/lib/trial";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { PaywallScreen } from "@/components/ui/PaywallScreen";
 import { registerPushToken } from "@/lib/notifications";
+import { rescheduleAllReminders } from "@/lib/prayerReminders";
 import { SupportPromptModal } from "@/components/ui/SupportPromptModal";
 import { TrialWelcomeModal } from "@/components/ui/TrialWelcomeModal";
 import { PhonePromptModal } from "@/components/ui/PhonePromptModal";
@@ -132,6 +133,8 @@ function AuthGuard() {
         setIsPremium(premium || isTrialActive(useAuthStore.getState().profile) || isComped(useAuthStore.getState().profile));
         ensurePremiumListener();
         await registerPushToken(session.user.id);
+        // Re-arm per-prayer reminders (e.g. after a reinstall) without blocking launch.
+        rescheduleAllReminders(session.user.id);
       }
       setIsLoading(false);
     });

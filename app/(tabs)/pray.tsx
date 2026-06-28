@@ -1,22 +1,74 @@
 import { useState, useMemo } from "react";
-import { View, Text, TouchableOpacity, ActivityIndicator, SectionList, ScrollView, Image, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator, SectionList, ScrollView, Image, StyleSheet, Modal, Pressable, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import * as ImagePicker from "expo-image-picker";
 import { usePrayerList } from "@/hooks/usePrayers";
 import { PrayerListItem } from "@/components/prayer/PrayerListItem";
 import { PrayerRequest, Category } from "@/types";
 import { useTheme } from "@/hooks/useTheme";
+import { AppTheme } from "@/constants/theme";
 import { Icon } from "@/components/ui/Icon";
 import { useAuthStore } from "@/stores/authStore";
 import { useSignedImage } from "@/hooks/useSignedImage";
+import { supabase } from "@/lib/supabase";
+import { uploadPrayerImage, removePrayerImage } from "@/lib/prayerImages";
+import { exportPrayerListPdf } from "@/lib/exportPrayerListPdf";
 
 export default function PrayScreen() {
     const Theme = useTheme();
   const router = useRouter();
-  const { profile } = useAuthStore();
+  const { user, profile, fetchProfile } = useAuthStore();
   const { data: bgUrl } = useSignedImage(profile?.prayer_bg_path);
   const { data: prayers = [], isLoading, refetch } = usePrayerList();
   const [filter, setFilter] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [bgBusy, setBgBusy] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const closeMenu = () => setMenuOpen(false);
+
+  const handleChangeBackground = async () => {
+    if (!user) return;
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) { Alert.alert("Photo access needed", "Allow photo access in Settings to choose a background."); return; }
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85 });
+    if (res.canceled || !res.assets?.[0]?.uri) return;
+    setBgBusy(true);
+    try {
+      const oldPath = profile?.prayer_bg_path ?? null;
+      const newPath = await uploadPrayerImage(user.id, res.assets[0].uri, "bg-");
+      if (!newPath) { Alert.alert("Couldn't set background", "Please try again."); return; }
+      const { error } = await supabase.from("profiles").update({ prayer_bg_path: newPath }).eq("id", user.id);
+      if (error) { Alert.alert("Error", error.message); return; }
+      if (oldPath) await removePrayerImage(oldPath);
+      await fetchProfile(user.id);
+    } finally {
+      setBgBusy(false);
+    }
+  };
+
+  const handleRemoveBackground = async () => {
+    if (!user) return;
+    setBgBusy(true);
+    try {
+      const oldPath = profile?.prayer_bg_path ?? null;
+      const { error } = await supabase.from("profiles").update({ prayer_bg_path: null }).eq("id", user.id);
+      if (error) { Alert.alert("Error", error.message); return; }
+      if (oldPath) await removePrayerImage(oldPath);
+      await fetchProfile(user.id);
+    } finally {
+      setBgBusy(false);
+    }
+  };
+
+  const handleExportPdf = async () => {
+    if (!user) return;
+    setExporting(true);
+    try { await exportPrayerListPdf(user.id, profile?.display_name || "Friend"); }
+    catch (e: any) { Alert.alert("Export failed", e.message ?? "Please try again."); }
+    setExporting(false);
+  };
 
   const tags = useMemo(() => {
     const set = new Set<string>();
@@ -72,14 +124,14 @@ export default function PrayScreen() {
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <TouchableOpacity
-              onPress={() => router.push("/prayer/import")}
+              onPress={() => setMenuOpen(true)}
               activeOpacity={0.85}
               style={{
                 width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center",
                 backgroundColor: "rgba(255,255,255,0.08)",
               }}
             >
-              <Icon name="image" size={18} color={Theme.darkText} />
+              <Icon name="gear" size={18} color={Theme.darkText} />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => router.push("/timer")}
@@ -167,7 +219,62 @@ export default function PrayScreen() {
           refreshing={isLoading}
         />
       )}
+
+      <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={closeMenu}>
+        <Pressable onPress={closeMenu} style={{ flex: 1, backgroundColor: "rgba(16,16,26,0.55)", justifyContent: "flex-end" }}>
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            style={{ backgroundColor: Theme.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 10, paddingBottom: 40, paddingHorizontal: 18 }}
+          >
+            <View style={{ alignSelf: "center", width: 40, height: 4, borderRadius: 2, backgroundColor: Theme.cardBorder, marginBottom: 14 }} />
+            <SheetOption
+              Theme={Theme}
+              icon="image"
+              title={profile?.prayer_bg_path ? "Change background" : "Set background photo"}
+              subtitle="Personalize your prayer list"
+              busy={bgBusy}
+              onPress={() => { closeMenu(); handleChangeBackground(); }}
+            />
+            {profile?.prayer_bg_path ? (
+              <SheetOption
+                Theme={Theme}
+                icon="x"
+                title="Remove background"
+                subtitle="Back to the default look"
+                danger
+                onPress={() => { closeMenu(); handleRemoveBackground(); }}
+              />
+            ) : null}
+            <SheetOption
+              Theme={Theme}
+              icon="download"
+              title="Export as PDF"
+              subtitle="A beautiful copy of your whole list"
+              busy={exporting}
+              onPress={() => { closeMenu(); handleExportPdf(); }}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
+  );
+}
+
+function SheetOption({
+  Theme, icon, title, subtitle, onPress, busy, danger,
+}: { Theme: AppTheme; icon: string; title: string; subtitle: string; onPress: () => void; busy?: boolean; danger?: boolean }) {
+  const tint = danger ? Theme.urgent : Theme.primary;
+  return (
+    <TouchableOpacity onPress={onPress} disabled={busy} activeOpacity={0.8} style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14 }}>
+      <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: danger ? "rgba(224,85,107,0.12)" : Theme.primarySoft, alignItems: "center", justifyContent: "center" }}>
+        {busy ? <ActivityIndicator color={tint} /> : <Icon name={icon} size={22} color={tint} />}
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 16, color: danger ? Theme.urgent : Theme.text }}>{title}</Text>
+        <Text style={{ fontFamily: Theme.font.sans, fontSize: 13, color: Theme.textMuted, marginTop: 1 }}>{subtitle}</Text>
+      </View>
+      <Icon name="right" size={18} color={Theme.textFaint} />
+    </TouchableOpacity>
   );
 }
 

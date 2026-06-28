@@ -8,6 +8,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { format } from "date-fns";
 import { usePrayerRequest, useDeletePrayer, useMarkAnswered, useChangeStatus, usePrayerUpdates, useAddPrayerUpdate, useDeletePrayerUpdate } from "@/hooks/usePrayers";
 import { CategoryChip } from "@/components/prayer/CategoryChip";
+import { PrayerReminders } from "@/components/prayer/PrayerReminders";
 import { PrayerStatus, PrayerRequest, Category, PrayerUpdate } from "@/types";
 import { useTheme } from "@/hooks/useTheme";
 import { AppTheme } from "@/constants/theme";
@@ -156,6 +157,11 @@ export default function PrayerDetailScreen() {
             </View>
             <Text style={{ fontFamily: Theme.font.serifReg, fontSize: 16, color: Theme.text, lineHeight: 25 }}>{prayer.answer_notes}</Text>
           </View>
+        )}
+
+        {/* Reminders — nudge to pray for this specific request */}
+        {status !== "answered" && status !== "completed" && (
+          <PrayerReminders prayerId={prayer.id} title={prayer.title} detail={prayer.description} />
         )}
 
         {/* Prayer Journey — updates & praise reports (keeps request on your list) */}
