@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, ScrollView, Image,
   KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useTheme } from "@/hooks/useTheme";
 import { AppTheme } from "@/constants/theme";
@@ -28,9 +28,13 @@ export default function ImportScreen() {
   const { isPremium, showPaywall } = useSubscriptionStore();
   const bulkCreate = useBulkCreatePrayers();
   // Trial members get fewer scans than paid (trials are free, so they're the cost).
-  const cap = isTrialActive(profile) && !isComped(profile) ? 2 : 5;
+  const isTrial = isTrialActive(profile) && !isComped(profile);
+  const cap = isTrial ? 2 : 5;
+  // The server prefers RevenueCat; this is the fallback when it can't verify.
+  const claim = { premium: isPremium, trial: isTrial };
 
-  const [tab, setTab] = useState<Tab>("photo");
+  const params = useLocalSearchParams<{ tab?: string }>();
+  const [tab, setTab] = useState<Tab>(params.tab === "text" ? "text" : "photo");
   const [images, setImages] = useState<string[]>([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -56,7 +60,7 @@ export default function ImportScreen() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) { Alert.alert("Photo access needed", "Allow photo access in Settings to import from a picture."); return; }
     const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"], allowsMultipleSelection: true, selectionLimit: 3, quality: 0.8,
+      mediaTypes: ["images"], allowsMultipleSelection: true, selectionLimit: 3, quality: 0.45,
     });
     if (!res.canceled) setImages(res.assets.map((a) => a.uri).slice(0, 3));
   };
@@ -64,7 +68,7 @@ export default function ImportScreen() {
   const handleExtract = async (mode: Tab) => {
     setBusy(true);
     try {
-      const result = mode === "photo" ? await importFromPhotos(images) : await importFromText(text);
+      const result = mode === "photo" ? await importFromPhotos(images, claim) : await importFromText(text, claim);
       if (result.error) {
         if (result.code === "not_pro") { showPaywall(); return; }
         Alert.alert("Couldn't import", result.error);

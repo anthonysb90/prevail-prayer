@@ -81,9 +81,11 @@ Deno.serve(async (req: Request) => {
     const period = new Date().toISOString().slice(0, 7); // 'YYYY-MM' UTC
 
     // ---- Pro gate + per-tier cap (photo only) ------------------------------
+    const claimPremium = payload?.premium === true;
+    const claimTrial = payload?.trial === true;
     let photoCap = PHOTO_CAP;
     if (mode === "photo") {
-      const tier = await callerTier(admin, userId);
+      const tier = await callerTier(admin, userId, claimPremium, claimTrial);
       if (tier === "none") return json({ error: "Photo import is a Pro feature.", code: "not_pro" }, 403);
       photoCap = tier === "trial" ? TRIAL_PHOTO_CAP : PHOTO_CAP;
     }
@@ -158,6 +160,9 @@ Deno.serve(async (req: Request) => {
       { onConflict: "user_id,period" },
     );
 
+    // Self-tracked AI cost (best effort; never blocks the response).
+    await logAiCost(admin, userId, mode, aiJson);
+
     const remaining = mode === "photo"
       ? { photo: Math.max(0, photoCap - (photoUsed + 1)), photoCap }
       : { photo: Math.max(0, PHOTO_CAP - photoUsed), photoCap: PHOTO_CAP };
@@ -174,26 +179,77 @@ Deno.serve(async (req: Request) => {
 async function callerTier(
   admin: ReturnType<typeof createClient>,
   userId: string,
+  claimPremium: boolean,
+  claimTrial: boolean,
 ): Promise<Tier> {
   const { data: profile } = await admin.from("profiles").select("comp_until").eq("id", userId).maybeSingle();
   const compUntil = profile?.comp_until ? new Date(profile.comp_until).getTime() : 0;
   if (compUntil > Date.now()) return "comp";
 
+  // Prefer RevenueCat when it can give a definitive answer.
   const rcKey = Deno.env.get("REVENUECAT_SECRET_KEY");
-  if (!rcKey) return "none"; // can't verify subscribers without the key
+  if (rcKey) {
+    try {
+      const resp = await fetch(`https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(userId)}`, {
+        headers: { Authorization: `Bearer ${rcKey}` },
+      });
+      if (resp.ok) {
+        const body = await resp.json();
+        const ent = body?.subscriber?.entitlements?.[ENTITLEMENT_ID];
+        const active = ent && (!ent.expires_date || new Date(ent.expires_date).getTime() > Date.now());
+        if (active) return ent.period_type === "trial" ? "trial" : "paid";
+      }
+    } catch (_e) {
+      // fall through to the client's claim
+    }
+  }
+
+  // Fallback: trust the app's own subscription state (it already gates the UI).
+  if (claimPremium) return claimTrial ? "trial" : "paid";
+  return "none";
+}
+
+// Fallback prices (USD per 1M tokens) if a model has no ai_model_prices row.
+const PRICE_DEFAULTS: { key: string; in: number; out: number }[] = [
+  { key: "claude-3-5-sonnet", in: 3, out: 15 },
+  { key: "claude-3-5-haiku", in: 0.8, out: 4 },
+];
+
+// Record one call's token cost into ai_cost_log using editable per-model prices.
+async function logAiCost(
+  admin: ReturnType<typeof createClient>,
+  userId: string,
+  mode: string,
+  aiJson: { usage?: { input_tokens?: number; output_tokens?: number }; model?: string },
+): Promise<void> {
   try {
-    const resp = await fetch(`https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(userId)}`, {
-      headers: { Authorization: `Bearer ${rcKey}` },
+    const inTok = aiJson?.usage?.input_tokens ?? 0;
+    const outTok = aiJson?.usage?.output_tokens ?? 0;
+    const model = aiJson?.model ?? (mode === "text" ? "claude-3-5-haiku" : "claude-3-5-sonnet");
+
+    let inPrice = 0;
+    let outPrice = 0;
+    const { data: rows } = await admin.from("ai_model_prices").select("model, input_per_mtok, output_per_mtok");
+    const match = (rows ?? []).find((r: { model: string }) => model.includes(r.model));
+    if (match) {
+      inPrice = Number(match.input_per_mtok);
+      outPrice = Number(match.output_per_mtok);
+    } else {
+      const d = PRICE_DEFAULTS.find((p) => model.includes(p.key));
+      if (d) { inPrice = d.in; outPrice = d.out; }
+    }
+
+    const cost = (inTok / 1e6) * inPrice + (outTok / 1e6) * outPrice;
+    await admin.from("ai_cost_log").insert({
+      user_id: userId,
+      mode,
+      model,
+      input_tokens: inTok,
+      output_tokens: outTok,
+      cost_usd: Number(cost.toFixed(6)),
     });
-    if (!resp.ok) return "none";
-    const body = await resp.json();
-    const ent = body?.subscriber?.entitlements?.[ENTITLEMENT_ID];
-    if (!ent) return "none";
-    const active = !ent.expires_date || new Date(ent.expires_date).getTime() > Date.now();
-    if (!active) return "none";
-    return ent.period_type === "trial" ? "trial" : "paid";
-  } catch (_e) {
-    return "none";
+  } catch (e) {
+    console.error("logAiCost failed", e);
   }
 }
 

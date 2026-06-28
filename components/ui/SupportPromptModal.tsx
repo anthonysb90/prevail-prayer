@@ -10,7 +10,7 @@ import { Icon } from "@/components/ui/Icon";
 import { BrandMark } from "@/components/ui/BrandMark";
 
 const DONATION_URL = "https://prevailprayer.com/support"; // update with real link
-const APP_STORE_URL = "https://apps.apple.com/app/prevail-prayer/idYOUR_APP_ID"; // update after submission
+const APP_STORE_URL = "https://apps.apple.com/app/id6778065935";
 
 const OPTIONS = [
   {

@@ -1,4 +1,5 @@
 import * as Notifications from "expo-notifications";
+import * as Application from "expo-application";
 import { Platform } from "react-native";
 import { supabase } from "@/lib/supabase";
 
@@ -33,6 +34,8 @@ export async function registerPushToken(userId: string): Promise<void> {
       user_id: userId,
       expo_push_token: token,
       platform: Platform.OS as "ios" | "android",
+      app_version: Application.nativeApplicationVersion ?? null,
+      app_build: Application.nativeBuildVersion ?? null,
       updated_at: new Date().toISOString(),
     });
   } catch (e) {

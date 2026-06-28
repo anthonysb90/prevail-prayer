@@ -33,7 +33,7 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     if (!email || !password) return Alert.alert("Please enter your email and password.");
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
     if (error) Alert.alert("Login failed", error.message);
     setLoading(false);
   };
@@ -54,7 +54,7 @@ export default function LoginScreen() {
           <View style={{ gap: 16, marginBottom: 30 }}>
             <View>
               <Text style={lbl}>Email</Text>
-              <TextInput style={input as any} placeholder="your@email.com" placeholderTextColor={Theme.textFaint} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
+              <TextInput style={input as any} placeholder="your@email.com" placeholderTextColor={Theme.textFaint} value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} autoComplete="email" textContentType="emailAddress" keyboardType="email-address" />
             </View>
             <View>
               <Text style={lbl}>Password</Text>

@@ -39,7 +39,8 @@ export default function SignupScreen() {
   const handleGoogle = async () => { try { await signInWithGoogle(); } catch (e: any) { Alert.alert("Google Sign In", e?.message ?? "Could not sign in."); } };
 
   const handleSignUp = async () => {
-    if (!displayName.trim() || !email || !password) {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!displayName.trim() || !cleanEmail || !password) {
       return Alert.alert("Please fill in all fields.");
     }
     if (password.length < 8) {
@@ -54,7 +55,7 @@ export default function SignupScreen() {
     }
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: cleanEmail,
       password,
       options: { data: { display_name: displayName.trim(), birthday: birthdayIso } },
     });
@@ -116,7 +117,7 @@ export default function SignupScreen() {
             </View>
             <View>
               <Text style={lbl}>Email</Text>
-              <TextInput style={input as any} placeholder="your@email.com" placeholderTextColor={Theme.textFaint} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
+              <TextInput style={input as any} placeholder="your@email.com" placeholderTextColor={Theme.textFaint} value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} autoComplete="email" textContentType="emailAddress" keyboardType="email-address" />
             </View>
             <View>
               <Text style={lbl}>Password</Text>

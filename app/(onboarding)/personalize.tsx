@@ -19,15 +19,14 @@ function formatPhone(input: string) {
   return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
 }
 
-const input = {
-  backgroundColor: Theme.card, borderWidth: 1, borderColor: Theme.cardBorder,
-  borderRadius: Theme.radius.inner, paddingHorizontal: 16, paddingVertical: 14,
-  fontFamily: Theme.font.sans, fontSize: 16, color: Theme.text,
-} as const;
-const lbl = { fontFamily: Theme.font.sansMed as string, fontSize: 13, color: Theme.textMuted, marginBottom: 6 };
-
 export default function PersonalizeScreen() {
     const Theme = useTheme();
+  const input = {
+    backgroundColor: Theme.card, borderWidth: 1, borderColor: Theme.cardBorder,
+    borderRadius: Theme.radius.inner, paddingHorizontal: 16, paddingVertical: 14,
+    fontFamily: Theme.font.sans, fontSize: 16, color: Theme.text,
+  } as const;
+  const lbl = { fontFamily: Theme.font.sansMed as string, fontSize: 13, color: Theme.textMuted, marginBottom: 6 };
   const router = useRouter();
   const { user, fetchProfile } = useAuthStore();
   const [phone, setPhone] = useState("");

@@ -55,7 +55,7 @@ export const LightTheme = {
     shadowRadius: 14,
     elevation: 2,
   },
-} as const;
+};
 
 export const DarkTheme: typeof LightTheme = {
   isDark: true,

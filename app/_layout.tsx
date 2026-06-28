@@ -16,7 +16,7 @@ import { useAppLockStore } from "@/stores/appLockStore";
 import { LockScreen } from "@/components/ui/LockScreen";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
-import { initializePurchases, getSubscriptionStatus } from "@/lib/purchases";
+import { initializePurchases, getSubscriptionStatus, onCustomerInfoUpdate } from "@/lib/purchases";
 import { isTrialActive, isComped } from "@/lib/trial";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { PaywallScreen } from "@/components/ui/PaywallScreen";
@@ -52,6 +52,17 @@ function AuthGuard() {
   const router = useRouter();
   const notificationListener = useRef<ReturnType<typeof Notifications.addNotificationReceivedListener> | undefined>(undefined);
   const responseListener = useRef<ReturnType<typeof Notifications.addNotificationResponseReceivedListener> | undefined>(undefined);
+  const rcUnsub = useRef<null | (() => void)>(null);
+
+  // RevenueCat loads customer info a beat after launch; without this listener the
+  // app would keep its initial (not-premium) guess until the user left and re-entered.
+  const ensurePremiumListener = () => {
+    if (rcUnsub.current) return;
+    rcUnsub.current = onCustomerInfoUpdate((rc) => {
+      const p = useAuthStore.getState().profile;
+      setIsPremium(rc || isTrialActive(p) || isComped(p));
+    });
+  };
 
   useEffect(() => {
     // Handle foreground notifications
@@ -119,18 +130,23 @@ function AuthGuard() {
         await initializePurchases(session.user.id);
         const premium = await getSubscriptionStatus();
         setIsPremium(premium || isTrialActive(useAuthStore.getState().profile) || isComped(useAuthStore.getState().profile));
+        ensurePremiumListener();
         await registerPushToken(session.user.id);
       }
       setIsLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      rcUnsub.current?.();
+      rcUnsub.current = null;
+    };
   }, []);
 
   useEffect(() => {
     if (isLoading) return;
     const inAuthGroup = segments[0] === "(auth)";
-    const onResetScreen = segments[0] === "(auth)" && segments[1] === "reset";
+    const onResetScreen = segments[0] === "(auth)" && (segments as string[])[1] === "reset";
     if (!session && !inAuthGroup) {
       router.replace("/(auth)/welcome");
     } else if (session && inAuthGroup && !onResetScreen) {

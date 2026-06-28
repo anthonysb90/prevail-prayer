@@ -4,7 +4,7 @@ import {
   ScrollView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useCategories } from "@/hooks/useCategories";
+import { useCategories, useCreateCategory } from "@/hooks/useCategories";
 import { useCreatePrayer } from "@/hooks/usePrayers";
 import { PrayerStatus, Category } from "@/types";
 import { useTheme } from "@/hooks/useTheme";
@@ -50,6 +50,7 @@ export default function NewPrayerScreen() {
   const { user } = useAuthStore();
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
   const createPrayer = useCreatePrayer();
+  const createCat = useCreateCategory();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -57,9 +58,22 @@ export default function NewPrayerScreen() {
   const [status, setStatus] = useState<PrayerStatus>("active");
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [newCat, setNewCat] = useState("");
 
   const toggleCategory = (id: string) =>
     setSelectedCategoryIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
+
+  const handleAddCategory = async () => {
+    const name = newCat.trim();
+    if (!name) return;
+    try {
+      const cat = await createCat.mutateAsync(name);
+      setNewCat("");
+      setSelectedCategoryIds((prev) => [...prev, cat.id]);
+    } catch (e: any) {
+      Alert.alert("Couldn't add category", e?.message ?? "Please try again.");
+    }
+  };
 
   const handleSave = async () => {
     if (!title.trim()) return Alert.alert("Please add a title for your prayer request.");
@@ -163,6 +177,18 @@ export default function NewPrayerScreen() {
                 </TouchableOpacity>
               );
             })}
+            <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 8, borderRadius: Theme.radius.pill, borderWidth: 1, borderStyle: "dashed", borderColor: Theme.cardBorder, backgroundColor: Theme.card }}>
+              <Text style={{ fontFamily: Theme.font.sansBold, fontSize: 15, color: Theme.primary, marginRight: 5 }}>+</Text>
+              <TextInput
+                value={newCat}
+                onChangeText={setNewCat}
+                placeholder="New"
+                placeholderTextColor={Theme.textFaint}
+                onSubmitEditing={handleAddCategory}
+                returnKeyType="done"
+                style={{ minWidth: 46, padding: 0, fontFamily: Theme.font.sansMed, fontSize: 13, color: Theme.text }}
+              />
+            </View>
           </View>
         )}
       </ScrollView>

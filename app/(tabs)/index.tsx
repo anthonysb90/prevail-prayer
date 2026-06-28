@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Image } from "react-native";
 import { useRouter } from "expo-router";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { format } from "date-fns";
 import { useAuthStore } from "@/stores/authStore";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
@@ -117,8 +117,14 @@ function DevotionHero() {
 export default function HomeScreen() {
     const Theme = useTheme();
   const router = useRouter();
-  const { profile } = useAuthStore();
+  const { user, profile, fetchProfile } = useAuthStore();
   const [verse, setVerse] = useState(getRandomVerse);
+
+  // Cold start can render Home before the profile has loaded; refetch so the
+  // greeting shows the user's name without needing to leave and re-enter.
+  useEffect(() => {
+    if (user && !profile?.display_name) fetchProfile(user.id);
+  }, [user, profile?.display_name, fetchProfile]);
 
   const { data: active = [],   refetch: refetchActive  } = useActivePrayers();
   const { data: ongoing = [],  refetch: refetchOngoing } = useOngoingPrayers();

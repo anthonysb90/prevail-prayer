@@ -4,7 +4,7 @@ import {
   ScrollView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useCategories } from "@/hooks/useCategories";
+import { useCategories, useCreateCategory } from "@/hooks/useCategories";
 import { usePrayerRequest, useUpdatePrayer } from "@/hooks/usePrayers";
 import { PrayerStatus, PrayerRequest, Category } from "@/types";
 import { useTheme } from "@/hooks/useTheme";
@@ -40,6 +40,7 @@ function EditForm({ prayerId }: { prayerId: string }) {
   const { user } = useAuthStore();
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
   const updatePrayer = useUpdatePrayer();
+  const createCat = useCreateCategory();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -61,8 +62,21 @@ function EditForm({ prayerId }: { prayerId: string }) {
     }
   }, [prayer, initialized]);
 
+  const [newCat, setNewCat] = useState("");
   const toggleCategory = (id: string) =>
     setSelectedCategoryIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
+
+  const handleAddCategory = async () => {
+    const name = newCat.trim();
+    if (!name) return;
+    try {
+      const cat = await createCat.mutateAsync(name);
+      setNewCat("");
+      setSelectedCategoryIds((prev) => [...prev, cat.id]);
+    } catch (e: any) {
+      Alert.alert("Couldn't add category", e?.message ?? "Please try again.");
+    }
+  };
 
   const handleSave = async () => {
     if (!title.trim()) return Alert.alert("Please add a title.");
@@ -181,6 +195,18 @@ function EditForm({ prayerId }: { prayerId: string }) {
                 </TouchableOpacity>
               );
             })}
+            <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 8, borderRadius: Theme.radius.pill, borderWidth: 1, borderStyle: "dashed", borderColor: Theme.cardBorder, backgroundColor: Theme.card }}>
+              <Text style={{ fontFamily: Theme.font.sansBold, fontSize: 15, color: Theme.primary, marginRight: 5 }}>+</Text>
+              <TextInput
+                value={newCat}
+                onChangeText={setNewCat}
+                placeholder="New"
+                placeholderTextColor={Theme.textFaint}
+                onSubmitEditing={handleAddCategory}
+                returnKeyType="done"
+                style={{ minWidth: 46, padding: 0, fontFamily: Theme.font.sansMed, fontSize: 13, color: Theme.text }}
+              />
+            </View>
           </View>
         )}
       </ScrollView>
