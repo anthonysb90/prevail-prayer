@@ -36,6 +36,7 @@ export function PrayerListItem({ prayer }: PrayerListItemProps) {
             >
               {prayer.title}
             </Text>
+            {prayer.image_path ? <Icon name="image" size={14} color={Theme.darkMuted} /> : null}
           </View>
 
           {prayer.description ? (

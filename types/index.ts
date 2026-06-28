@@ -12,6 +12,7 @@ export interface Profile {
   theme_pref: "system" | "light" | "dark";
   prayer_streak: number;
   last_prayer_date: string | null;
+  prayer_bg_path: string | null;
   subscription_status: "free" | "trial" | "premium" | "expired";
   is_admin: boolean;
   created_at: string;
@@ -43,6 +44,7 @@ export interface PrayerRequest {
   archived_at: string | null;
   created_at: string;
   updated_at: string;
+  image_path?: string | null;
   categories?: Category[];
 }
 

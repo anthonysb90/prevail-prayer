@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -6,15 +6,13 @@ import { PremiumGate } from "@/components/ui/PremiumGate";
 import { BellInterval } from "@/types";
 import { useAuthStore } from "@/stores/authStore";
 import { useQueryClient } from "@tanstack/react-query";
-import { logPrayerSession, updatePrayerStreak } from "@/lib/streak";
 import { useSupportPrompt } from "@/hooks/useSupportPrompt";
-import { useAmbientAudio } from "@/hooks/useAmbientAudio";
+import { usePrayerSession, AmbientSource } from "@/stores/prayerSession";
 import { fetchAvailableTracks, BUNDLED_ASSETS, MusicTrackRow } from "@/lib/music";
 import { getDownloadedMap, downloadTrack, removeDownload } from "@/lib/musicDownload";
 import { useTheme } from "@/hooks/useTheme";
 import { AppTheme } from "@/constants/theme";
 import { Icon } from "@/components/ui/Icon";
-import { analytics } from "@/lib/analytics";
 
 const DURATIONS = [
   { label: "5 min", seconds: 300 }, { label: "10 min", seconds: 600 },
@@ -52,6 +50,14 @@ function formatTime(seconds: number) {
   return m + ":" + s;
 }
 
+function resolveSource(t: MusicTrackRow, downloads: Record<string, string>): AmbientSource {
+  if (t.is_bundled && t.bundle_key && BUNDLED_ASSETS[t.bundle_key]) return BUNDLED_ASSETS[t.bundle_key];
+  const local = downloads[t.id];
+  if (local) return { uri: local };
+  if (t.file_url) return { uri: t.file_url };
+  return null;
+}
+
 const mkLabel = (Theme: AppTheme) => ({
   color: Theme.darkMuted, fontFamily: Theme.font.sansBold as string, fontSize: 12,
   textTransform: "uppercase" as const, letterSpacing: 1.2, marginBottom: 10,
@@ -65,87 +71,52 @@ function TimerContent() {
   const qc = useQueryClient();
   const { checkAndShow } = useSupportPrompt();
 
-  const [duration, setDuration] = useState(300);
-  const [bellInterval, setBellInterval] = useState<BellInterval>("end-only");
-  const [guidance, setGuidance] = useState<Guidance>("off");
-  const [running, setRunning] = useState(false);
-  const [remaining, setRemaining] = useState(300);
-  const [completed, setCompleted] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const session = usePrayerSession();
+  const { duration, remaining, running, completed, active, bellInterval, trackId: selectedId } = session;
 
-  // Admin-managed music
+  const [guidance, setGuidance] = useState<Guidance>("off");
   const [tracks, setTracks] = useState<MusicTrackRow[]>([]);
-  const [selectedId, setSelectedId] = useState<string>(SILENCE);
   const [downloads, setDownloads] = useState<Record<string, string>>({});
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const defaultedRef = useRef(false);
+  const completionHandled = useRef(false);
 
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const startTimeRef = useRef<number>(0);
-
-  // Load the available tracks + any offline downloads once.
+  // Load available tracks + offline downloads.
   useEffect(() => {
-    let active = true;
+    let alive = true;
     fetchAvailableTracks().then((rows) => {
-      if (!active) return;
+      if (!alive) return;
       setTracks(rows);
-      if (rows.length > 0) setSelectedId(rows[0].id);
+      // Default-select the first track once, only if no session is in progress.
+      if (!defaultedRef.current && !usePrayerSession.getState().active && usePrayerSession.getState().trackId === SILENCE && rows.length > 0) {
+        defaultedRef.current = true;
+        const t = rows[0];
+        usePrayerSession.getState().selectTrack(t.id, resolveSource(t, {}), t.title);
+      }
     });
-    getDownloadedMap().then((m) => { if (active) setDownloads(m); });
-    return () => { active = false; };
+    getDownloadedMap().then((m) => { if (alive) setDownloads(m); });
+    return () => { alive = false; };
   }, []);
 
-  // Resolve the playable source for the current selection.
-  const { source, sourceId } = useMemo<{ source: number | { uri: string } | null; sourceId: string }>(() => {
-    if (selectedId === SILENCE) return { source: null, sourceId: SILENCE };
-    const t = tracks.find((x) => x.id === selectedId);
-    if (!t) return { source: null, sourceId: SILENCE };
-    if (t.is_bundled && t.bundle_key && BUNDLED_ASSETS[t.bundle_key]) {
-      return { source: BUNDLED_ASSETS[t.bundle_key], sourceId: "bundle:" + t.bundle_key };
-    }
-    const local = downloads[t.id];
-    if (local) return { source: { uri: local }, sourceId: "local:" + t.id };
-    if (t.file_url) return { source: { uri: t.file_url }, sourceId: "remote:" + t.id };
-    return { source: null, sourceId: SILENCE };
-  }, [selectedId, tracks, downloads]);
-
-  useAmbientAudio(sourceId, source, bellInterval, running, remaining, duration);
-  useEffect(() => { setRemaining(duration); }, [duration]);
-
+  // When a session completes while this screen is focused, do the UI side-effects.
   useEffect(() => {
-    if (running) {
-      intervalRef.current = setInterval(() => {
-        setRemaining((prev) => {
-          if (prev <= 1) { clearInterval(intervalRef.current!); setRunning(false); handleComplete(); return 0; }
-          return prev - 1;
-        });
-      }, 1000);
-    } else if (intervalRef.current) clearInterval(intervalRef.current);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [running]);
-
-  const handleComplete = async () => {
-    if (!user || saving) return;
-    setSaving(true);
-    try {
-      const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000);
-      const sessionCount = await logPrayerSession(user.id, elapsed, selectedId);
-      await updatePrayerStreak(user.id);
-      analytics.capture("prayer_session_completed", { duration_seconds: elapsed, track: selectedId, bell: bellInterval, guidance });
-      qc.invalidateQueries({ queryKey: ["prayer_requests", user.id, "counts"] });
-      await checkAndShow("session_completed", sessionCount);
-    } catch {}
-    setSaving(false);
-    setCompleted(true);
-  };
-  const handleStart = () => { startTimeRef.current = Date.now(); setRemaining(duration); setCompleted(false); setRunning(true); };
-  const handleStop = () => {
-    setRunning(false);
-    if (startTimeRef.current > 0) {
-      Alert.alert("End Session?", "Do you want to end your prayer time early?", [
-        { text: "Keep Praying", style: "cancel", onPress: () => setRunning(true) },
-        { text: "End", style: "destructive" },
-      ]);
+    if (completed && !completionHandled.current) {
+      completionHandled.current = true;
+      if (user) qc.invalidateQueries({ queryKey: ["prayer_requests", user.id, "counts"] });
+      checkAndShow("session_completed", 0).catch(() => {});
     }
+    if (!completed) completionHandled.current = false;
+  }, [completed]);
+
+  const selectTrack = (t: MusicTrackRow) => session.selectTrack(t.id, resolveSource(t, downloads), t.title);
+  const selectSilence = () => session.selectTrack(SILENCE, null, "Silence");
+
+  const handleStart = () => session.start(user?.id ?? null);
+  const handleStop = () => {
+    Alert.alert("End Session?", "Do you want to end your prayer time early?", [
+      { text: "Keep Praying", style: "cancel" },
+      { text: "End", style: "destructive", onPress: () => session.stop() },
+    ]);
   };
 
   const handleDownload = (t: MusicTrackRow) => {
@@ -176,7 +147,7 @@ function TimerContent() {
     <View style={{ flex: 1, backgroundColor: Theme.dark }}>
       <StatusBar style="light" />
       <View style={{ paddingTop: 60, paddingHorizontal: 22, flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <TouchableOpacity onPress={() => { setRunning(false); router.back(); }}><Icon name="down" size={24} color={Theme.darkText} /></TouchableOpacity>
+        <TouchableOpacity onPress={() => router.back()}><Icon name="down" size={24} color={Theme.darkText} /></TouchableOpacity>
         <Text style={{ color: Theme.darkText, fontFamily: Theme.font.serif, fontSize: 20 }}>Prayer Timer</Text>
         <View style={{ width: 24 }} />
       </View>
@@ -186,9 +157,7 @@ function TimerContent() {
           <View style={{ alignItems: "center" }}>
             <Icon name="check" size={60} color={Theme.accentOnDark} sw={2} />
             <Text style={{ color: Theme.darkText, fontFamily: Theme.font.serif, fontSize: 30, marginTop: 14 }}>Amen.</Text>
-            <Text style={{ color: Theme.darkMuted, fontFamily: Theme.font.sans, fontSize: 14, marginTop: 8 }}>
-              {saving ? "Saving session..." : "Session complete"}
-            </Text>
+            <Text style={{ color: Theme.darkMuted, fontFamily: Theme.font.sans, fontSize: 14, marginTop: 8 }}>Session complete</Text>
           </View>
         ) : (
           <>
@@ -221,7 +190,7 @@ function TimerContent() {
             return (
               <TouchableOpacity
                 key={d.seconds}
-                onPress={() => { if (!running) { setDuration(d.seconds); setRemaining(d.seconds); } }}
+                onPress={() => { if (!running) session.setDuration(d.seconds); }}
                 style={{ paddingHorizontal: 16, paddingVertical: 9, borderRadius: Theme.radius.pill, backgroundColor: on ? Theme.primary : Theme.darkSurface, opacity: running ? 0.5 : 1 }}
               >
                 <Text style={{ color: on ? "#FFFFFF" : Theme.darkMuted, fontFamily: Theme.font.sansMed, fontSize: 14 }}>{d.label}</Text>
@@ -236,7 +205,7 @@ function TimerContent() {
           const dl = !!downloads[t.id];
           const downloading = downloadingId === t.id;
           return (
-            <TouchableOpacity key={t.id} onPress={() => setSelectedId(t.id)} style={rowStyle(on)}>
+            <TouchableOpacity key={t.id} onPress={() => selectTrack(t)} style={rowStyle(on)}>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: Theme.darkText, fontFamily: Theme.font.sans, fontSize: 15 }}>{t.title}</Text>
                 {t.artist ? <Text style={{ color: Theme.darkMuted, fontFamily: Theme.font.sans, fontSize: 12, marginTop: 2 }}>{t.artist}</Text> : null}
@@ -260,14 +229,14 @@ function TimerContent() {
             </TouchableOpacity>
           );
         })}
-        <TouchableOpacity onPress={() => setSelectedId(SILENCE)} style={rowStyle(selectedId === SILENCE)}>
+        <TouchableOpacity onPress={selectSilence} style={rowStyle(selectedId === SILENCE)}>
           <Text style={{ color: Theme.darkText, fontFamily: Theme.font.sans, fontSize: 15 }}>Silence</Text>
           {selectedId === SILENCE && <Icon name="check" size={18} color={Theme.accentOnDark} />}
         </TouchableOpacity>
 
         <Text style={[label, { marginTop: 8 }]}>Bell Interval</Text>
         {BELL_OPTIONS.map((b) => (
-          <TouchableOpacity key={b.id} onPress={() => setBellInterval(b.id)} style={rowStyle(bellInterval === b.id)}>
+          <TouchableOpacity key={b.id} onPress={() => session.setBell(b.id)} style={rowStyle(bellInterval === b.id)}>
             <Text style={{ color: Theme.darkText, fontFamily: Theme.font.sans, fontSize: 15 }}>{b.label}</Text>
             {bellInterval === b.id && <Icon name="check" size={18} color={Theme.accentOnDark} />}
           </TouchableOpacity>
@@ -292,17 +261,31 @@ function TimerContent() {
 
       <View style={{ paddingHorizontal: 22, paddingBottom: 44 }}>
         {completed ? (
-          <TouchableOpacity onPress={() => { setCompleted(false); setRemaining(duration); }} style={{ backgroundColor: Theme.darkSurface, borderRadius: Theme.radius.pill, paddingVertical: 17, alignItems: "center", borderWidth: 1, borderColor: Theme.darkBorder }}>
+          <TouchableOpacity onPress={() => session.reset()} style={{ backgroundColor: Theme.darkSurface, borderRadius: Theme.radius.pill, paddingVertical: 17, alignItems: "center", borderWidth: 1, borderColor: Theme.darkBorder }}>
             <Text style={{ color: Theme.darkMuted, fontFamily: Theme.font.sansSemi, fontSize: 16 }}>Pray Again</Text>
           </TouchableOpacity>
-        ) : !running ? (
+        ) : !running && !active ? (
           <TouchableOpacity onPress={handleStart} style={{ backgroundColor: Theme.primary, borderRadius: Theme.radius.pill, paddingVertical: 17, alignItems: "center" }}>
             <Text style={{ color: "#FFFFFF", fontFamily: Theme.font.sansSemi, fontSize: 16 }}>Start Prayer</Text>
           </TouchableOpacity>
+        ) : !running && active ? (
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <TouchableOpacity onPress={() => session.resume()} style={{ flex: 1, backgroundColor: Theme.primary, borderRadius: Theme.radius.pill, paddingVertical: 17, alignItems: "center" }}>
+              <Text style={{ color: "#FFFFFF", fontFamily: Theme.font.sansSemi, fontSize: 16 }}>Resume</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleStop} style={{ flex: 1, backgroundColor: Theme.darkSurface, borderRadius: Theme.radius.pill, paddingVertical: 17, alignItems: "center", borderWidth: 1, borderColor: Theme.darkBorder }}>
+              <Text style={{ color: Theme.darkMuted, fontFamily: Theme.font.sansSemi, fontSize: 16 }}>End</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
-          <TouchableOpacity onPress={handleStop} style={{ backgroundColor: Theme.darkSurface, borderRadius: Theme.radius.pill, paddingVertical: 17, alignItems: "center", borderWidth: 1, borderColor: Theme.darkBorder }}>
-            <Text style={{ color: Theme.darkMuted, fontFamily: Theme.font.sansSemi, fontSize: 16 }}>End Session</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <TouchableOpacity onPress={() => session.pause()} style={{ flex: 1, backgroundColor: Theme.darkSurface, borderRadius: Theme.radius.pill, paddingVertical: 17, alignItems: "center", borderWidth: 1, borderColor: Theme.darkBorder }}>
+              <Text style={{ color: Theme.darkText, fontFamily: Theme.font.sansSemi, fontSize: 16 }}>Pause</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleStop} style={{ flex: 1, backgroundColor: Theme.darkSurface, borderRadius: Theme.radius.pill, paddingVertical: 17, alignItems: "center", borderWidth: 1, borderColor: Theme.darkBorder }}>
+              <Text style={{ color: Theme.darkMuted, fontFamily: Theme.font.sansSemi, fontSize: 16 }}>End</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     </View>

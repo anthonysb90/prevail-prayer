@@ -10,6 +10,9 @@ import { PrayerStatus, PrayerRequest, Category } from "@/types";
 import { useTheme } from "@/hooks/useTheme";
 import { AppTheme } from "@/constants/theme";
 import { Icon } from "@/components/ui/Icon";
+import { PhotoPickerField } from "@/components/prayer/PhotoPickerField";
+import { uploadPrayerImage, removePrayerImage } from "@/lib/prayerImages";
+import { useAuthStore } from "@/stores/authStore";
 
 const STATUS_OPTIONS: { value: PrayerStatus; label: string }[] = [
   { value: "active", label: "Active" },
@@ -34,6 +37,7 @@ function EditForm({ prayerId }: { prayerId: string }) {
     const fieldLabel = mkFieldLabel(Theme);
   const router = useRouter();
   const { data: prayer, isLoading: prayerLoading } = usePrayerRequest(prayerId) as { data: PrayerRequest | undefined; isLoading: boolean };
+  const { user } = useAuthStore();
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
   const updatePrayer = useUpdatePrayer();
 
@@ -42,6 +46,8 @@ function EditForm({ prayerId }: { prayerId: string }) {
   const [isUrgent, setIsUrgent] = useState(false);
   const [status, setStatus] = useState<PrayerStatus>("active");
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [removedExisting, setRemovedExisting] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
@@ -61,7 +67,21 @@ function EditForm({ prayerId }: { prayerId: string }) {
   const handleSave = async () => {
     if (!title.trim()) return Alert.alert("Please add a title.");
     try {
-      await updatePrayer.mutateAsync({ id: prayerId, title, description: description.trim() || null, status, is_urgent: isUrgent, categoryIds: selectedCategoryIds });
+      const oldPath = prayer?.image_path ?? null;
+      let imageUpdate: { image_path?: string | null } = {};
+      if (imageUri && user) {
+        const newPath = await uploadPrayerImage(user.id, imageUri);
+        if (newPath) {
+          imageUpdate.image_path = newPath;
+          if (oldPath) await removePrayerImage(oldPath);
+        } else {
+          Alert.alert("Photo couldn't be uploaded", "Other changes will still be saved.");
+        }
+      } else if (removedExisting && oldPath) {
+        imageUpdate.image_path = null;
+        await removePrayerImage(oldPath);
+      }
+      await updatePrayer.mutateAsync({ id: prayerId, title, description: description.trim() || null, status, is_urgent: isUrgent, categoryIds: selectedCategoryIds, ...imageUpdate });
       router.back();
     } catch (e: any) {
       Alert.alert("Error saving changes", e.message);
@@ -97,6 +117,14 @@ function EditForm({ prayerId }: { prayerId: string }) {
           style={[inputStyle, { minHeight: 100, textAlignVertical: "top", fontSize: 15 }] as any}
           placeholder="Details, Scripture, or context (optional)..." placeholderTextColor={Theme.textFaint}
           value={description} onChangeText={setDescription} multiline numberOfLines={4}
+        />
+
+        <Text style={fieldLabel}>Photo</Text>
+        <PhotoPickerField
+          localUri={imageUri}
+          existingPath={removedExisting ? null : prayer?.image_path}
+          onPick={(uri) => { setImageUri(uri); setRemovedExisting(false); }}
+          onClear={() => { setImageUri(null); setRemovedExisting(true); }}
         />
 
         <TouchableOpacity

@@ -139,6 +139,7 @@ interface CreateInput {
   status: PrayerStatus;
   is_urgent: boolean;
   categoryIds: string[];
+  image_path?: string | null;
 }
 
 export function useCreatePrayer() {
@@ -156,6 +157,7 @@ export function useCreatePrayer() {
           description: input.description?.trim() || null,
           status: input.status,
           is_urgent: input.is_urgent,
+          image_path: input.image_path ?? null,
         })
         .select()
         .single();
@@ -182,6 +184,33 @@ export function useCreatePrayer() {
   });
 }
 
+/** Bulk-create prayer requests (used by AI import after review). Returns count inserted. */
+export function useBulkCreatePrayers() {
+  const { user } = useAuthStore();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (items: { title: string; description?: string | null }[]) => {
+      const rows = items
+        .filter((i) => i.title.trim())
+        .map((i) => ({
+          user_id: user!.id,
+          title: i.title.trim(),
+          description: i.description?.trim() || null,
+          status: "active" as PrayerStatus,
+          is_urgent: false,
+        }));
+      if (rows.length === 0) return 0;
+      const { error } = await supabase.from("prayer_requests").insert(rows);
+      if (error) throw error;
+      return rows.length;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [KEY, user?.id] });
+    },
+  });
+}
+
 interface UpdateInput {
   id: string;
   title?: string;
@@ -191,6 +220,7 @@ interface UpdateInput {
   answer_notes?: string | null;
   answered_at?: string | null;
   categoryIds?: string[];
+  image_path?: string | null;
 }
 
 export function useUpdatePrayer() {

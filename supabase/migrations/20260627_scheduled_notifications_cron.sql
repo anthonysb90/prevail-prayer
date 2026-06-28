@@ -1,0 +1,19 @@
+-- Schedule the send-scheduled-notifications edge function to run every 5 minutes.
+-- Run AFTER deploying the function:
+--   supabase functions deploy send-scheduled-notifications --no-verify-jwt
+-- and after setting the CRON_SECRET function secret.
+--
+-- Replace <PROJECT_REF> and <CRON_SECRET> below. Requires pg_cron + pg_net
+-- (already enabled for the birthday cron).
+
+-- select cron.schedule(
+--   'send-scheduled-notifications',
+--   '*/5 * * * *',
+--   $$
+--   select net.http_post(
+--     url := 'https://<PROJECT_REF>.functions.supabase.co/send-scheduled-notifications',
+--     headers := jsonb_build_object('Content-Type','application/json','x-cron-secret','<CRON_SECRET>'),
+--     body := '{}'::jsonb
+--   );
+--   $$
+-- );

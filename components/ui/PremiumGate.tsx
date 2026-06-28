@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
 
@@ -19,9 +19,19 @@ export function PremiumGate({
   icon,
   children,
 }: PremiumGateProps) {
-  const { isPremium, showPaywall } = useSubscriptionStore();
+  const { isPremium, isLoading, showPaywall } = useSubscriptionStore();
 
   if (isPremium) return <>{children}</>;
+
+  // Don't flash the paywall while subscription status is still being resolved
+  // on a cold start — show a neutral loader until we actually know.
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: "#F1EFF9", alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator color="#5B53C6" />
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: "#F1EFF9" }}>

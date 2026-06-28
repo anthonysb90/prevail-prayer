@@ -11,6 +11,9 @@ import { useTheme } from "@/hooks/useTheme";
 import { AppTheme } from "@/constants/theme";
 import { Icon } from "@/components/ui/Icon";
 import { analytics } from "@/lib/analytics";
+import { PhotoPickerField } from "@/components/prayer/PhotoPickerField";
+import { uploadPrayerImage } from "@/lib/prayerImages";
+import { useAuthStore } from "@/stores/authStore";
 
 const STATUS_OPTIONS: { value: PrayerStatus; label: string }[] = [
   { value: "active", label: "Active" },
@@ -44,6 +47,7 @@ export default function NewPrayerScreen() {
     const inputStyle = mkInputStyle(Theme);
     const fieldLabel = mkFieldLabel(Theme);
   const router = useRouter();
+  const { user } = useAuthStore();
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
   const createPrayer = useCreatePrayer();
 
@@ -52,6 +56,7 @@ export default function NewPrayerScreen() {
   const [isUrgent, setIsUrgent] = useState(false);
   const [status, setStatus] = useState<PrayerStatus>("active");
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [imageUri, setImageUri] = useState<string | null>(null);
 
   const toggleCategory = (id: string) =>
     setSelectedCategoryIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
@@ -59,7 +64,12 @@ export default function NewPrayerScreen() {
   const handleSave = async () => {
     if (!title.trim()) return Alert.alert("Please add a title for your prayer request.");
     try {
-      await createPrayer.mutateAsync({ title, description, status, is_urgent: isUrgent, categoryIds: selectedCategoryIds });
+      let image_path: string | null = null;
+      if (imageUri && user) {
+        image_path = await uploadPrayerImage(user.id, imageUri);
+        if (!image_path) Alert.alert("Photo couldn't be uploaded", "Your request will be saved without the photo.");
+      }
+      await createPrayer.mutateAsync({ title, description, status, is_urgent: isUrgent, categoryIds: selectedCategoryIds, image_path });
       analytics.capture("prayer_added", { is_urgent: isUrgent, status });
       router.back();
     } catch (e: any) {
@@ -90,6 +100,13 @@ export default function NewPrayerScreen() {
           placeholder="Add details, Scripture, or context (optional)..."
           placeholderTextColor={Theme.textFaint}
           value={description} onChangeText={setDescription} multiline numberOfLines={4}
+        />
+
+        <Text style={fieldLabel}>Photo</Text>
+        <PhotoPickerField
+          localUri={imageUri}
+          onPick={setImageUri}
+          onClear={() => setImageUri(null)}
         />
 
         <TouchableOpacity

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { View, Text, TouchableOpacity, ActivityIndicator, SectionList, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator, SectionList, ScrollView, Image, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { usePrayerList } from "@/hooks/usePrayers";
@@ -7,10 +7,14 @@ import { PrayerListItem } from "@/components/prayer/PrayerListItem";
 import { PrayerRequest, Category } from "@/types";
 import { useTheme } from "@/hooks/useTheme";
 import { Icon } from "@/components/ui/Icon";
+import { useAuthStore } from "@/stores/authStore";
+import { useSignedImage } from "@/hooks/useSignedImage";
 
 export default function PrayScreen() {
     const Theme = useTheme();
   const router = useRouter();
+  const { profile } = useAuthStore();
+  const { data: bgUrl } = useSignedImage(profile?.prayer_bg_path);
   const { data: prayers = [], isLoading, refetch } = usePrayerList();
   const [filter, setFilter] = useState<string | null>(null);
 
@@ -38,6 +42,12 @@ export default function PrayScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: Theme.dark }}>
+      {bgUrl ? (
+        <>
+          <Image source={{ uri: bgUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(16,16,26,0.80)" }]} />
+        </>
+      ) : null}
       <StatusBar style="light" />
 
       {/* Header */}
@@ -60,22 +70,34 @@ export default function PrayScreen() {
               Prayer List
             </Text>
           </View>
-          <TouchableOpacity
-            onPress={() => router.push("/timer")}
-            activeOpacity={0.85}
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 6,
-              backgroundColor: Theme.primary,
-              borderRadius: Theme.radius.pill,
-              paddingVertical: 10,
-              paddingHorizontal: 16,
-            }}
-          >
-            <Icon name="pray" size={17} color="#FFFFFF" />
-            <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 14, color: "#FFFFFF" }}>Pray</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <TouchableOpacity
+              onPress={() => router.push("/prayer/import")}
+              activeOpacity={0.85}
+              style={{
+                width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center",
+                backgroundColor: "rgba(255,255,255,0.08)",
+              }}
+            >
+              <Icon name="image" size={18} color={Theme.darkText} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push("/timer")}
+              activeOpacity={0.85}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                backgroundColor: Theme.primary,
+                borderRadius: Theme.radius.pill,
+                paddingVertical: 10,
+                paddingHorizontal: 16,
+              }}
+            >
+              <Icon name="pray" size={17} color="#FFFFFF" />
+              <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 14, color: "#FFFFFF" }}>Pray</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Filter chips */}

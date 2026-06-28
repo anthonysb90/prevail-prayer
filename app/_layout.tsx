@@ -27,6 +27,8 @@ import { PhonePromptModal } from "@/components/ui/PhonePromptModal";
 import { BirthdayPromptModal } from "@/components/ui/BirthdayPromptModal";
 import { BirthdayNotificationHandler } from "@/components/ui/BirthdayNotificationHandler";
 import { GiftCelebrationModal } from "@/components/ui/GiftCelebrationModal";
+import { PrayerMiniPlayer } from "@/components/ui/PrayerMiniPlayer";
+import { WhatsNewModal } from "@/components/ui/WhatsNewModal";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -116,7 +118,7 @@ function AuthGuard() {
         await useThemeStore.getState().hydrate(useAuthStore.getState().profile?.theme_pref);
         await initializePurchases(session.user.id);
         const premium = await getSubscriptionStatus();
-        setIsPremium(premium || isTrialActive(useAuthStore.getState().profile));
+        setIsPremium(premium || isTrialActive(useAuthStore.getState().profile) || isComped(useAuthStore.getState().profile));
         await registerPushToken(session.user.id);
       }
       setIsLoading(false);
@@ -194,6 +196,8 @@ export default function RootLayout() {
       <BirthdayPromptModal />
       <BirthdayNotificationHandler />
       <GiftCelebrationModal />
+      <PrayerMiniPlayer />
+      <WhatsNewModal />
       <LockGate />
     </PersistQueryClientProvider>
   );

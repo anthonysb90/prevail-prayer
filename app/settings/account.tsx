@@ -5,11 +5,15 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
 import { pickAndUploadAvatar } from "@/lib/avatar";
+import { uploadPrayerImage, removePrayerImage } from "@/lib/prayerImages";
+import { useSignedImage } from "@/hooks/useSignedImage";
 import { useTheme } from "@/hooks/useTheme";
 import { exportMyData } from "@/lib/exportData";
+import { exportPrayerListPdf } from "@/lib/exportPrayerListPdf";
 import { formatBirthdayInput, parseBirthday, isoToMasked } from "@/lib/birthday";
 import { compExpiryLabel } from "@/lib/trial";
 import { Icon } from "@/components/ui/Icon";
@@ -34,6 +38,9 @@ export default function AccountScreen() {
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportingList, setExportingList] = useState(false);
+  const [bgBusy, setBgBusy] = useState(false);
+  const { data: bgUrl } = useSignedImage(profile?.prayer_bg_path);
 
   const phoneDigits = phone.replace(/\D/g, "");
   const phoneValid = phoneDigits.length === 0 || phoneDigits.length === 10;
@@ -76,11 +83,52 @@ export default function AccountScreen() {
     setUploadingAvatar(false);
   };
 
+  const handleChangeBackground = async () => {
+    if (!user) return;
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) { Alert.alert("Photo access needed", "Allow photo access in Settings to choose a background."); return; }
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85 });
+    if (res.canceled || !res.assets?.[0]?.uri) return;
+    setBgBusy(true);
+    try {
+      const oldPath = profile?.prayer_bg_path ?? null;
+      const newPath = await uploadPrayerImage(user.id, res.assets[0].uri, "bg-");
+      if (!newPath) { Alert.alert("Couldn't set background", "Please try again."); return; }
+      const { error } = await supabase.from("profiles").update({ prayer_bg_path: newPath }).eq("id", user.id);
+      if (error) { Alert.alert("Error", error.message); return; }
+      if (oldPath) await removePrayerImage(oldPath);
+      await fetchProfile(user.id);
+    } finally {
+      setBgBusy(false);
+    }
+  };
+
+  const handleRemoveBackground = async () => {
+    if (!user) return;
+    setBgBusy(true);
+    try {
+      const oldPath = profile?.prayer_bg_path ?? null;
+      const { error } = await supabase.from("profiles").update({ prayer_bg_path: null }).eq("id", user.id);
+      if (error) { Alert.alert("Error", error.message); return; }
+      if (oldPath) await removePrayerImage(oldPath);
+      await fetchProfile(user.id);
+    } finally {
+      setBgBusy(false);
+    }
+  };
+
   const handleExport = async () => {
     setExporting(true);
     try { await exportMyData(user!.id, displayName || "Friend"); }
     catch (e: any) { Alert.alert("Export failed", e.message ?? "Please try again."); }
     setExporting(false);
+  };
+
+  const handleExportPrayerList = async () => {
+    setExportingList(true);
+    try { await exportPrayerListPdf(user!.id, displayName || "Friend"); }
+    catch (e: any) { Alert.alert("Export failed", e.message ?? "Please try again."); }
+    setExportingList(false);
   };
 
   const handleSignOut = () => {
@@ -174,6 +222,28 @@ export default function AccountScreen() {
           </View>
         )}
 
+        {/* Prayer List Background */}
+        <View style={cardStyle}>
+          <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 11, color: Theme.textFaint, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 14 }}>Prayer List Background</Text>
+          {profile?.prayer_bg_path && bgUrl ? (
+            <Image source={{ uri: bgUrl }} style={{ width: "100%", height: 150, borderRadius: 14, backgroundColor: Theme.bg, marginBottom: 14 }} resizeMode="cover" />
+          ) : (
+            <View style={{ width: "100%", height: 150, borderRadius: 14, backgroundColor: Theme.bg, alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+              <Text style={{ fontFamily: Theme.font.sans, fontSize: 13, color: Theme.textFaint }}>No custom background</Text>
+            </View>
+          )}
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <TouchableOpacity onPress={handleChangeBackground} disabled={bgBusy} style={{ flex: 1, backgroundColor: Theme.primary, borderRadius: 100, paddingVertical: 13, alignItems: "center" }}>
+              {bgBusy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 14, color: "#FFFFFF" }}>{profile?.prayer_bg_path ? "Change" : "Choose photo"}</Text>}
+            </TouchableOpacity>
+            {profile?.prayer_bg_path ? (
+              <TouchableOpacity onPress={handleRemoveBackground} disabled={bgBusy} style={{ paddingHorizontal: 18, justifyContent: "center", borderRadius: 100, borderWidth: 1, borderColor: Theme.cardBorder }}>
+                <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 14, color: Theme.urgent }}>Remove</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        </View>
+
         {/* Stats */}
         <View style={cardStyle}>
           <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 11, color: Theme.textFaint, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 16 }}>Prayer Stats</Text>
@@ -189,6 +259,11 @@ export default function AccountScreen() {
 
         {/* Your data */}
         <View style={{ backgroundColor: Theme.card, borderRadius: 20, overflow: "hidden", marginBottom: 20, borderWidth: 1, borderColor: Theme.cardBorder }}>
+          <TouchableOpacity onPress={handleExportPrayerList} disabled={exportingList} style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: Theme.bg }}>
+            <Ionicons name="list-outline" size={20} color={Theme.primary} style={{ marginRight: 12 }} />
+            <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 15, color: Theme.text, flex: 1 }}>{exportingList ? "Preparing PDF..." : "Export Prayer List (PDF)"}</Text>
+            <Ionicons name="chevron-forward" size={16} color={Theme.textFaint} />
+          </TouchableOpacity>
           <TouchableOpacity onPress={handleExport} disabled={exporting} style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 16 }}>
             <Ionicons name="download-outline" size={20} color={Theme.primary} style={{ marginRight: 12 }} />
             <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 15, color: Theme.text, flex: 1 }}>{exporting ? "Preparing PDF..." : "Export my data (PDF)"}</Text>

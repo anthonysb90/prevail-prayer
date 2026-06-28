@@ -1,7 +1,8 @@
 import {
   View, Text, ScrollView, TouchableOpacity,
-  Alert, ActivityIndicator, Share, TextInput, Switch,
+  Alert, ActivityIndicator, Share, TextInput, Switch, Image,
 } from "react-native";
+import { useSignedImage } from "@/hooks/useSignedImage";
 import { useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { format } from "date-fns";
@@ -32,6 +33,7 @@ export default function PrayerDetailScreen() {
   const markAnswered = useMarkAnswered();
   const changeStatus = useChangeStatus();
   const { data: updates = [] } = usePrayerUpdates(id);
+  const { data: photoUrl } = useSignedImage(prayer?.image_path);
   const addUpdate = useAddPrayerUpdate();
   const delUpdate = useDeletePrayerUpdate();
   const [composerOpen, setComposerOpen] = useState(false);
@@ -127,6 +129,14 @@ export default function PrayerDetailScreen() {
           <View style={{ flexDirection: "row", flexWrap: "wrap", marginBottom: 18 }}>
             {prayer.categories.map((cat: Category) => <CategoryChip key={cat.id} category={cat} />)}
           </View>
+        )}
+
+        {prayer.image_path && photoUrl && (
+          <Image
+            source={{ uri: photoUrl }}
+            style={{ width: "100%", height: 240, borderRadius: Theme.radius.card, marginBottom: 18, backgroundColor: Theme.card }}
+            resizeMode="cover"
+          />
         )}
 
         {prayer.description && (
