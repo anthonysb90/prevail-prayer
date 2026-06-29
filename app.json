@@ -3,7 +3,7 @@
     "owner": "btwollc",
     "name": "Prevail Prayer",
     "slug": "prevail-prayer",
-    "version": "1.0.0",
+    "version": "1.0.26",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "prevailprayer",
