@@ -55,6 +55,8 @@ export function PaywallScreen() {
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [selected, setSelected] = useState<PurchasesPackage | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
 
@@ -64,7 +66,13 @@ export function PaywallScreen() {
 
     async function load() {
       setLoading(true);
-      const offering = await getOfferings(isBirthday ? BIRTHDAY_OFFERING_ID : undefined);
+      setLoadError(false);
+      // Never spin forever: if the App Store / RevenueCat is slow or not ready,
+      // time out after 12s and show a retry instead of an endless spinner.
+      const offering = await Promise.race([
+        getOfferings(isBirthday ? BIRTHDAY_OFFERING_ID : undefined),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 12000)),
+      ]).catch(() => null);
       if (!active) return;
       const pkgs = (offering?.availablePackages ?? [])
         .slice()
@@ -73,6 +81,7 @@ export function PaywallScreen() {
       // Pre-select the yearly tier if present, otherwise the first package.
       const annual = pkgs.find((p) => p.packageType === "ANNUAL");
       setSelected(annual ?? pkgs[0] ?? null);
+      setLoadError(pkgs.length === 0);
       setLoading(false);
     }
 
@@ -80,7 +89,9 @@ export function PaywallScreen() {
     return () => {
       active = false;
     };
-  }, [paywallVisible, isBirthday]);
+  }, [paywallVisible, isBirthday, reloadKey]);
+
+  const retryLoad = () => setReloadKey((k) => k + 1);
 
   const ctaLabel = (() => {
     if (!selected) return "Continue";
@@ -226,21 +237,34 @@ export function PaywallScreen() {
 
           {/* Tier selection */}
           {loading ? (
-            <View style={{ paddingVertical: 28 }}>
+            <View style={{ paddingVertical: 28, alignItems: "center" }}>
               <ActivityIndicator color="#5B53C6" />
+              <Text style={{ fontFamily: "HankenGrotesk_400Regular", fontSize: 13, color: "#9794A4", marginTop: 12 }}>
+                Loading plans…
+              </Text>
             </View>
-          ) : packages.length === 0 ? (
-            <Text
-              style={{
-                fontFamily: "HankenGrotesk_400Regular",
-                fontSize: 14,
-                color: "#9794A4",
-                textAlign: "center",
-                paddingVertical: 24,
-              }}
-            >
-              Plans are loading from the App Store. Please try again in a moment.
-            </Text>
+          ) : loadError || packages.length === 0 ? (
+            <View style={{ paddingVertical: 24, alignItems: "center" }}>
+              <Text
+                style={{
+                  fontFamily: "HankenGrotesk_400Regular",
+                  fontSize: 14,
+                  color: "#9794A4",
+                  textAlign: "center",
+                  marginBottom: 14,
+                  lineHeight: 20,
+                }}
+              >
+                We couldn&apos;t load plans from the App Store.{"\n"}Check your connection and try again.
+              </Text>
+              <TouchableOpacity
+                onPress={retryLoad}
+                style={{ backgroundColor: "#ECEAFA", borderRadius: 100, paddingVertical: 12, paddingHorizontal: 28 }}
+                activeOpacity={0.85}
+              >
+                <Text style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 14, color: "#5B53C6" }}>Try again</Text>
+              </TouchableOpacity>
+            </View>
           ) : (
             <View style={{ marginBottom: 20 }}>
               {packages.map((pkg) => {

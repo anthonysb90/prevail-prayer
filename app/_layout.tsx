@@ -117,6 +117,7 @@ function AuthGuard() {
           await initializePurchases(session.user.id);
           const premium = await getSubscriptionStatus();
           setIsPremium(premium || isTrialActive(useAuthStore.getState().profile) || isComped(useAuthStore.getState().profile));
+          ensurePremiumListener();
           // Register push token — saves to Supabase so admin panel can send notifications
           await registerPushToken(session.user.id);
           setIsLoading(false);
@@ -147,6 +148,30 @@ function AuthGuard() {
       rcUnsub.current?.();
       rcUnsub.current = null;
     };
+  }, []);
+
+  // Re-sync subscription + profile whenever the app returns to the foreground.
+  // Without this, after a long background the app keeps a stale "not premium"
+  // guess and a stale profile (generic greeting) until a full quit-and-reopen.
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      const s = useAuthStore.getState().session;
+      if (!s?.user) return;
+      (async () => {
+        try {
+          ensurePremiumListener();
+          await fetchProfile(s.user.id);
+          const premium = await getSubscriptionStatus();
+          const prof = useAuthStore.getState().profile;
+          setIsPremium(premium || isTrialActive(prof) || isComped(prof));
+          queryClient.invalidateQueries();
+        } catch {
+          /* best-effort refresh */
+        }
+      })();
+    });
+    return () => sub.remove();
   }, []);
 
   useEffect(() => {

@@ -28,7 +28,10 @@ export default function PersonalizeScreen() {
   } as const;
   const lbl = { fontFamily: Theme.font.sansMed as string, fontSize: 13, color: Theme.textMuted, marginBottom: 6 };
   const router = useRouter();
-  const { user, fetchProfile } = useAuthStore();
+  const { user, profile, fetchProfile } = useAuthStore();
+  const nameParts = (profile?.display_name ?? "").trim().split(/\s+/).filter(Boolean);
+  const [first, setFirst] = useState(nameParts[0] ?? "");
+  const [last, setLast] = useState(nameParts.slice(1).join(" "));
   const [phone, setPhone] = useState("");
   const [zip, setZip] = useState("");
   const [saving, setSaving] = useState(false);
@@ -36,19 +39,22 @@ export default function PersonalizeScreen() {
   const phoneDigits = phone.replace(/\D/g, "");
   const phoneValid = phoneDigits.length === 0 || phoneDigits.length === 10;
   const zipValid = zip.length === 0 || zip.length === 5;
-  const canContinue = phoneValid && zipValid;
+  const nameValid = first.trim().length > 0 && last.trim().length > 0;
+  const canContinue = nameValid && phoneValid && zipValid;
 
   const save = async (skip: boolean) => {
     if (!user) return router.replace("/(tabs)");
     setSaving(true);
+    const fullName = `${first.trim()} ${last.trim()}`.replace(/\s+/g, " ").trim();
+    const updates: Record<string, string | null> = {};
+    if (fullName) updates.display_name = fullName;
     if (!skip) {
-      const updates: Record<string, string | null> = {};
       if (phoneDigits.length === 10) updates.phone = phoneDigits;
       if (zip.length === 5) updates.zip_code = zip;
-      if (Object.keys(updates).length > 0) {
-        await supabase.from("profiles").update(updates).eq("id", user.id);
-        await fetchProfile(user.id);
-      }
+    }
+    if (Object.keys(updates).length > 0) {
+      await supabase.from("profiles").update(updates).eq("id", user.id);
+      await fetchProfile(user.id);
     }
     setSaving(false);
     router.replace("/(tabs)");
@@ -63,8 +69,19 @@ export default function PersonalizeScreen() {
           </View>
           <Text style={{ fontFamily: Theme.font.serif, fontSize: 30, color: Theme.text, marginBottom: 12 }}>One last thing.</Text>
           <Text style={{ fontFamily: Theme.font.sans, fontSize: 16, color: Theme.textMuted, lineHeight: 24, marginBottom: 32 }}>
-            This helps your church stay connected with you. It's optional, and you can always add it later in Settings.
+            Tell us your name so we can personalize your experience. Phone and zip are optional and help your church stay connected.
           </Text>
+
+          <View style={{ flexDirection: "row", gap: 12, marginBottom: 18 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={lbl}>First Name</Text>
+              <TextInput style={input as any} placeholder="First" placeholderTextColor={Theme.textFaint} value={first} onChangeText={setFirst} autoCapitalize="words" autoComplete="name-given" textContentType="givenName" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={lbl}>Last Name</Text>
+              <TextInput style={input as any} placeholder="Last" placeholderTextColor={Theme.textFaint} value={last} onChangeText={setLast} autoCapitalize="words" autoComplete="name-family" textContentType="familyName" />
+            </View>
+          </View>
 
           <View style={{ marginBottom: 18 }}>
             <Text style={lbl}>Phone Number</Text>
@@ -80,8 +97,8 @@ export default function PersonalizeScreen() {
           <TouchableOpacity onPress={() => save(false)} disabled={!canContinue || saving} activeOpacity={0.88} style={{ backgroundColor: Theme.primary, borderRadius: Theme.radius.pill, paddingVertical: 16, alignItems: "center", opacity: canContinue && !saving ? 1 : 0.6 }}>
             {saving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 16, color: "#FFFFFF" }}>Start Praying</Text>}
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => save(true)} disabled={saving} style={{ marginTop: 18, alignItems: "center" }}>
-            <Text style={{ fontFamily: Theme.font.sans, fontSize: 14, color: Theme.textMuted }}>Skip for now</Text>
+          <TouchableOpacity onPress={() => save(true)} disabled={saving || !nameValid} style={{ marginTop: 18, alignItems: "center", opacity: nameValid && !saving ? 1 : 0.5 }}>
+            <Text style={{ fontFamily: Theme.font.sans, fontSize: 14, color: Theme.textMuted }}>Skip contact info</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

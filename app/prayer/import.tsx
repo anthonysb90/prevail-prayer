@@ -12,6 +12,7 @@ import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/lib/supabase";
 import { importFromPhotos, importFromText, ImportItem } from "@/lib/importPrayers";
+import { saveToCameraRoll } from "@/lib/saveToCameraRoll";
 import { useBulkCreatePrayers } from "@/hooks/usePrayers";
 import { isTrialActive, isComped } from "@/lib/trial";
 import { analytics } from "@/lib/analytics";
@@ -56,13 +57,33 @@ export default function ImportScreen() {
       .then(({ data }) => setPhotoLeft(Math.max(0, cap - (data?.photo_scans ?? 0))));
   }, [user, cap]);
 
-  const pickImages = async () => {
+  const chooseFromLibrary = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) { Alert.alert("Photo access needed", "Allow photo access in Settings to import from a picture."); return; }
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"], allowsMultipleSelection: true, selectionLimit: 3, quality: 0.45,
     });
     if (!res.canceled) setImages(res.assets.map((a) => a.uri).slice(0, 3));
+  };
+
+  const takePhoto = async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) { Alert.alert("Camera access needed", "Allow camera access in Settings to take a photo of your prayer list."); return; }
+    const res = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.45 });
+    if (!res.canceled && res.assets?.[0]) {
+      const uri = res.assets[0].uri;
+      setImages([uri]);
+      // Also keep a copy in the user's camera roll.
+      saveToCameraRoll(uri);
+    }
+  };
+
+  const pickImages = () => {
+    Alert.alert("Add a photo", "Import a prayer list from a picture.", [
+      { text: "Take Photo", onPress: takePhoto },
+      { text: "Choose from Library", onPress: chooseFromLibrary },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
   const handleExtract = async (mode: Tab) => {

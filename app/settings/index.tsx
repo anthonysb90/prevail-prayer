@@ -5,6 +5,7 @@ import { useAppLockStore } from "@/stores/appLockStore";
 import { isBiometricAvailable, getBiometricLabel, authenticate } from "@/lib/biometrics";
 import { useRouter } from "expo-router";
 import { useAuthStore } from "@/stores/authStore";
+import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { useTheme } from "@/hooks/useTheme";
 import { Icon } from "@/components/ui/Icon";
 
@@ -17,6 +18,7 @@ export default function SettingsScreen() {
     const Theme = useTheme();
   const router = useRouter();
   const { profile, signOut } = useAuthStore();
+  const { isPremium } = useSubscriptionStore();
   const { enabled: lockEnabled, setEnabled: setLockEnabled, hydrate: hydrateLock } = useAppLockStore();
   const [bioAvailable, setBioAvailable] = useState(false);
   const [bioLabel, setBioLabel] = useState("Face ID");
@@ -99,9 +101,19 @@ export default function SettingsScreen() {
               <Text style={{ fontFamily: Theme.font.serif, fontSize: 22, color: Theme.primary }}>{initial}</Text>
             </View>
           )}
-          <View>
-            <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 17, color: Theme.text }}>{name}</Text>
-            <Text style={{ fontFamily: Theme.font.sans, fontSize: 13, color: Theme.textFaint, marginTop: 2 }}>Prevail Prayer</Text>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 17, color: Theme.text }}>{name}</Text>
+              {isPremium && (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: Theme.primary, borderRadius: 100, paddingHorizontal: 8, paddingVertical: 2 }}>
+                  <Icon name="sparkle" size={11} color="#FFFFFF" />
+                  <Text style={{ fontFamily: Theme.font.sansBold, fontSize: 10, color: "#FFFFFF", letterSpacing: 0.5 }}>PRO</Text>
+                </View>
+              )}
+            </View>
+            <Text style={{ fontFamily: Theme.font.sans, fontSize: 13, color: Theme.textFaint, marginTop: 2 }}>
+              {isPremium ? "Premium member" : "Prevail Prayer"}
+            </Text>
           </View>
         </View>
 
