@@ -15,7 +15,8 @@ const HOST = process.env.EXPO_PUBLIC_POSTHOG_HOST ?? "https://us.i.posthog.com";
 let client: PostHog | null = null;
 try {
   if (KEY) {
-    client = new PostHog(KEY, { host: HOST });
+    // captureAppLifecycleEvents powers session length + "Application Opened/Backgrounded".
+    client = new PostHog(KEY, { host: HOST, captureAppLifecycleEvents: true });
   }
 } catch {
   client = null;
@@ -28,6 +29,14 @@ export const analytics = {
   },
   identify(distinctId: string, properties?: Record<string, any>) {
     try { client?.identify(distinctId, properties); } catch {}
+  },
+  /** Update person properties on the currently identified user (no event of interest). */
+  setPersonProperties(properties: Record<string, any>) {
+    try { client?.capture("$set", { $set: properties }); } catch {}
+  },
+  /** Record a screen view (helps with "what are people using" funnels). */
+  screen(name: string, properties?: Record<string, any>) {
+    try { client?.screen(name, properties); } catch {}
   },
   reset() {
     try { client?.reset(); } catch {}

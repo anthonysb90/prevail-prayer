@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { analytics } from "@/lib/analytics";
 
 export type PaywallContext = "default" | "birthday";
 
@@ -18,8 +19,8 @@ export const useSubscriptionStore = create<SubscriptionState>((set) => ({
   isLoading: true,
   paywallVisible: false,
   paywallContext: "default",
-  setIsPremium: (isPremium) => set({ isPremium }),
+  setIsPremium: (isPremium) => { analytics.setPersonProperties({ is_premium: isPremium }); set({ isPremium }); },
   setIsLoading: (isLoading) => set({ isLoading }),
-  showPaywall: (context = "default") => set({ paywallVisible: true, paywallContext: context }),
+  showPaywall: (context = "default") => { analytics.capture("paywall_shown", { context }); set({ paywallVisible: true, paywallContext: context }); },
   hidePaywall: () => set({ paywallVisible: false, paywallContext: "default" }),
 }));

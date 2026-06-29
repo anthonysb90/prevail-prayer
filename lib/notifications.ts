@@ -2,6 +2,7 @@ import * as Notifications from "expo-notifications";
 import * as Application from "expo-application";
 import { Platform } from "react-native";
 import { supabase } from "@/lib/supabase";
+import { analytics } from "@/lib/analytics";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -26,7 +27,11 @@ export async function registerPushToken(userId: string): Promise<void> {
       finalStatus = status;
     }
 
-    if (finalStatus !== "granted") return;
+    if (finalStatus !== "granted") {
+      // Record that this person has notifications off, so we can segment on it.
+      analytics.setPersonProperties({ push_enabled: false, platform: Platform.OS });
+      return;
+    }
 
     const token = (await Notifications.getExpoPushTokenAsync()).data;
 
@@ -38,6 +43,7 @@ export async function registerPushToken(userId: string): Promise<void> {
       app_build: Application.nativeBuildVersion ?? null,
       updated_at: new Date().toISOString(),
     });
+    analytics.setPersonProperties({ push_enabled: true, platform: Platform.OS });
   } catch (e) {
     console.warn("Push token registration failed:", e);
   }

@@ -75,7 +75,10 @@ function AuthGuard() {
     responseListener.current = Notifications.addNotificationResponseReceivedListener(
       (response) => {
         const screen = response.notification.request.content.data?.screen as string | undefined;
-        if (screen) {
+        if (screen === "upgrade") {
+          // Campaign deep link: open the paywall instead of a route.
+          useSubscriptionStore.getState().showPaywall();
+        } else if (screen) {
           router.push(screen as any);
         } else {
           router.push("/notifications");

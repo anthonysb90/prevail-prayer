@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
+import { analytics } from "@/lib/analytics";
 import { Devotion, DevotionResponse } from "@/types";
 
 const KEY = "devotions";
@@ -57,6 +58,7 @@ export function useDevotion(id: string) {
           .order("sort_order", { ascending: true }),
       ]);
       if (devotionRes.error) throw devotionRes.error;
+      analytics.capture("devotion_opened", { devotion_id: id, title: devotionRes.data?.title });
       return { ...devotionRes.data, questions: questionsRes.data ?? [] };
     },
     enabled: !!id,
@@ -137,6 +139,7 @@ export function useSubmitDevotionResponse() {
       return journalEntry;
     },
     onSuccess: (_, input) => {
+      analytics.capture("devotion_reflection_saved", { devotion_id: input.devotionId });
       qc.invalidateQueries({ queryKey: [KEY, "response", input.devotionId] });
       qc.invalidateQueries({ queryKey: ["journal_entries", user?.id] });
     },

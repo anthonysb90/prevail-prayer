@@ -11,7 +11,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const DAY = 86400000;
 
-function segmentMatch(row: any, segment: string): boolean {
+function segmentMatch(row: any, segment: string, usedPremium: boolean): boolean {
   const now = Date.now();
   const comped = !!row.comp_until && new Date(row.comp_until).getTime() > now;
   const premium = row.subscription_status === "premium" || comped;
@@ -28,14 +28,15 @@ function segmentMatch(row: any, segment: string): boolean {
     case "inactive14": return lastActive == null || now - lastActive > 14 * DAY;
     case "streak7": return (row.prayer_streak ?? 0) >= 7;
     case "birthday_month": return bdMonth === new Date().getMonth() + 1;
+    case "premium_unused": return (premium || row.subscription_status === "trial") && !usedPremium;
     default: return false;
   }
 }
 
-async function sendExpo(tokens: string[], title: string, body: string): Promise<number> {
+async function sendExpo(tokens: string[], title: string, body: string, screen?: string): Promise<number> {
   const list = tokens.filter(Boolean);
   if (!list.length) return 0;
-  const messages = list.map((to) => ({ to, title, body, sound: "default", data: { screen: "/notifications" } }));
+  const messages = list.map((to) => ({ to, title, body, sound: "default", data: { screen: screen || "/notifications" } }));
   let sent = 0;
   for (let i = 0; i < messages.length; i += 100) {
     const batch = messages.slice(i, i + 100);
@@ -62,16 +63,20 @@ Deno.serve(async (req) => {
 
   const { data: due } = await supabase
     .from("scheduled_notifications")
-    .select("id, title, body, segment, send_at")
+    .select("id, title, body, segment, send_at, screen")
     .eq("status", "pending")
     .lte("send_at", new Date().toISOString())
     .limit(50);
 
   if (!due || due.length === 0) return Response.json({ processed: 0 });
 
-  const [{ data: profiles }, { data: tokenRows }] = await Promise.all([
+  const [{ data: profiles }, { data: tokenRows }, dResp, jEnt, favs, sessions] = await Promise.all([
     supabase.from("profiles").select("id, subscription_status, comp_until, prayer_streak, last_active_at, last_prayer_date, birthday"),
     supabase.from("user_push_tokens").select("user_id, expo_push_token"),
+    supabase.from("devotion_responses").select("user_id"),
+    supabase.from("journal_entries").select("user_id"),
+    supabase.from("user_favorite_verses").select("user_id"),
+    supabase.from("prayer_sessions").select("user_id"),
   ]);
   const tokensByUser = new Map<string, string[]>();
   for (const t of tokenRows ?? []) {
@@ -80,16 +85,22 @@ Deno.serve(async (req) => {
     arr.push(t.expo_push_token);
     tokensByUser.set(t.user_id, arr);
   }
+  const usedPremium = new Set<string>();
+  for (const set of [dResp, jEnt, favs, sessions]) {
+    for (const r of (set?.data ?? []) as { user_id: string | null }[]) {
+      if (r.user_id) usedPremium.add(r.user_id);
+    }
+  }
 
   let processed = 0;
   for (const job of due) {
     const tokens: string[] = [];
     for (const p of profiles ?? []) {
-      if (!segmentMatch(p, job.segment)) continue;
+      if (!segmentMatch(p, job.segment, usedPremium.has(p.id))) continue;
       const t = tokensByUser.get(p.id);
       if (t) tokens.push(...t);
     }
-    const sent = await sendExpo(tokens, job.title, job.body ?? "");
+    const sent = await sendExpo(tokens, job.title, job.body ?? "", job.screen ?? undefined);
     await supabase.from("scheduled_notifications").update({ status: "sent", sent_at: new Date().toISOString(), sent_count: sent }).eq("id", job.id);
     await supabase.from("notification_log").insert({ title: job.title, body: job.body, segment: job.segment, sent_count: sent });
     processed++;

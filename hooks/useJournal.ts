@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
+import { analytics } from "@/lib/analytics";
 import { JournalEntry } from "@/types";
 
 const KEY = "journal_entries";
@@ -79,7 +80,8 @@ export function useCreateJournalEntry() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, input) => {
+      analytics.capture("journal_entry_created", { from_prayer: !!input.prayer_request_id });
       qc.invalidateQueries({ queryKey: [KEY, user?.id] });
     },
   });

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { Platform } from "react-native";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { Profile } from "@/types";
@@ -38,8 +39,16 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ profile });
       let timezone: string | undefined;
       try { timezone = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch {}
+      const p = profile as Record<string, any>;
+      const comped = !!p.comp_until && new Date(p.comp_until).getTime() > Date.now();
       analytics.identify(userId, {
+        email: p.email ?? undefined,
+        name: p.full_name ?? p.name ?? undefined,
         subscription_status: profile.subscription_status,
+        is_premium: profile.subscription_status === "premium" || comped,
+        comped,
+        account_created: p.created_at ?? undefined,
+        platform: Platform.OS,
         timezone,
       });
     }

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
+import { analytics } from "@/lib/analytics";
 import { ScriptureVerse } from "@/types";
 
 // ─── Query hooks ─────────────────────────────────────────────────────────────
@@ -16,6 +17,7 @@ export function useVersesByTopic(topic: string) {
         .order("sort_order", { ascending: true });
 
       if (error) throw error;
+      analytics.capture("scripture_topic_viewed", { topic, verse_count: data?.length ?? 0 });
       return data ?? [];
     },
     enabled: !!topic,

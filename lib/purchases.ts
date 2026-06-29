@@ -21,6 +21,7 @@ import Purchases, {
   PurchasesOffering,
   PurchasesPackage,
 } from "react-native-purchases";
+import { analytics } from "@/lib/analytics";
 
 export const ENTITLEMENT_ID = "Prevail Prayer Pro";
 
@@ -109,9 +110,24 @@ export async function purchasePackage(pkg: PurchasesPackage): Promise<boolean> {
   if (!configured) return false;
   try {
     const { customerInfo } = await Purchases.purchasePackage(pkg);
-    return isEntitled(customerInfo);
+    const entitled = isEntitled(customerInfo);
+    if (entitled) {
+      analytics.capture("purchase_completed", {
+        package: pkg.packageType,
+        product_id: pkg.product.identifier,
+        price: pkg.product.price,
+        currency: pkg.product.currencyCode,
+      });
+      analytics.setPersonProperties({ is_premium: true });
+    }
+    return entitled;
   } catch (e: any) {
-    if (!e?.userCancelled) console.warn("purchasePackage failed:", e);
+    if (!e?.userCancelled) {
+      console.warn("purchasePackage failed:", e);
+      analytics.capture("purchase_failed", { package: pkg.packageType });
+    } else {
+      analytics.capture("purchase_cancelled", { package: pkg.packageType });
+    }
     return false;
   }
 }
