@@ -48,22 +48,38 @@ const asyncPersister = createAsyncStoragePersister({ storage: AsyncStorage });
 
 function AuthGuard() {
   const { session, isLoading, setSession, fetchProfile } = useAuthStore();
+  // Subscribe to the profile so premium recomputes whenever it loads/changes.
+  const profile = useAuthStore((s) => s.profile);
   const { setIsPremium, setIsLoading } = useSubscriptionStore();
   const segments = useSegments();
   const router = useRouter();
   const notificationListener = useRef<ReturnType<typeof Notifications.addNotificationReceivedListener> | undefined>(undefined);
   const responseListener = useRef<ReturnType<typeof Notifications.addNotificationResponseReceivedListener> | undefined>(undefined);
   const rcUnsub = useRef<null | (() => void)>(null);
+  // Last known RevenueCat entitlement, so recomputing from the profile never
+  // clobbers a real paid subscription.
+  const rcPremiumRef = useRef(false);
+
+  const recomputePremium = (p = useAuthStore.getState().profile) => {
+    setIsPremium(rcPremiumRef.current || isTrialActive(p) || isComped(p));
+  };
 
   // RevenueCat loads customer info a beat after launch; without this listener the
   // app would keep its initial (not-premium) guess until the user left and re-entered.
   const ensurePremiumListener = () => {
     if (rcUnsub.current) return;
     rcUnsub.current = onCustomerInfoUpdate((rc) => {
-      const p = useAuthStore.getState().profile;
-      setIsPremium(rc || isTrialActive(p) || isComped(p));
+      rcPremiumRef.current = rc;
+      recomputePremium();
     });
   };
+
+  // Recompute premium whenever the profile becomes available or changes. This is
+  // what fixes "open the app and it doesn't recognize my trial/Pro": the profile
+  // can load (or be refetched) after the initial check, and premium must follow it.
+  useEffect(() => {
+    recomputePremium(profile);
+  }, [profile]);
 
   useEffect(() => {
     // Handle foreground notifications
@@ -115,8 +131,8 @@ function AuthGuard() {
           await useThemeStore.getState().hydrate(useAuthStore.getState().profile?.theme_pref);
           // Initialize RevenueCat
           await initializePurchases(session.user.id);
-          const premium = await getSubscriptionStatus();
-          setIsPremium(premium || isTrialActive(useAuthStore.getState().profile) || isComped(useAuthStore.getState().profile));
+          rcPremiumRef.current = await getSubscriptionStatus();
+          recomputePremium();
           ensurePremiumListener();
           // Register push token — saves to Supabase so admin panel can send notifications
           await registerPushToken(session.user.id);
@@ -133,8 +149,8 @@ function AuthGuard() {
         await fetchProfile(session.user.id);
         await useThemeStore.getState().hydrate(useAuthStore.getState().profile?.theme_pref);
         await initializePurchases(session.user.id);
-        const premium = await getSubscriptionStatus();
-        setIsPremium(premium || isTrialActive(useAuthStore.getState().profile) || isComped(useAuthStore.getState().profile));
+        rcPremiumRef.current = await getSubscriptionStatus();
+        recomputePremium();
         ensurePremiumListener();
         await registerPushToken(session.user.id);
         // Re-arm per-prayer reminders (e.g. after a reinstall) without blocking launch.
@@ -162,9 +178,8 @@ function AuthGuard() {
         try {
           ensurePremiumListener();
           await fetchProfile(s.user.id);
-          const premium = await getSubscriptionStatus();
-          const prof = useAuthStore.getState().profile;
-          setIsPremium(premium || isTrialActive(prof) || isComped(prof));
+          rcPremiumRef.current = await getSubscriptionStatus();
+          recomputePremium();
           queryClient.invalidateQueries();
         } catch {
           /* best-effort refresh */

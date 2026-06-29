@@ -28,14 +28,19 @@ export const useAuthStore = create<AuthState>((set) => ({
   setProfile: (profile) => set({ profile }),
 
   fetchProfile: async (userId: string) => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
+    // Retry a few times: on a cold relaunch (especially after iOS killed the app
+    // in the background) the first request can fail before the network is ready.
+    // A silent failure here left the user with no profile — generic greeting and,
+    // worse, an unrecognized trial (so they were wrongly asked to pay).
+    let data: Profile | null = null;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const res = await supabase.from("profiles").select("*").eq("id", userId).single();
+      if (!res.error && res.data) { data = res.data as Profile; break; }
+      await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+    }
 
-    if (!error && data) {
-      const profile = data as Profile;
+    if (data) {
+      const profile = data;
       set({ profile });
       let timezone: string | undefined;
       try { timezone = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch {}
