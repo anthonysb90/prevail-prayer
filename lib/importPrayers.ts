@@ -37,9 +37,12 @@ function mediaTypeFromUri(uri: string): string {
  */
 async function readImageAsJpeg(uri: string): Promise<{ data: string; media_type: string }> {
   try {
-    const context = ImageManipulator.manipulate(uri);
+    // Downscale to ~1500px wide before encoding. A raw phone photo is ~4000px /
+    // several MB; text stays perfectly legible at 1500px, and the smaller payload
+    // makes BOTH the upload and the AI vision pass dramatically faster.
+    const context = ImageManipulator.manipulate(uri).resize({ width: 1500 });
     const rendered = await context.renderAsync();
-    const out = await rendered.saveAsync({ compress: 0.6, format: SaveFormat.JPEG, base64: true });
+    const out = await rendered.saveAsync({ compress: 0.55, format: SaveFormat.JPEG, base64: true });
     if (out.base64) return { data: out.base64, media_type: "image/jpeg" };
   } catch (_e) {
     // fall through to the raw read below

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView, Image,
   KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
@@ -41,6 +41,47 @@ export default function ImportScreen() {
   const [busy, setBusy] = useState(false);
   const [rows, setRows] = useState<Row[] | null>(null);
   const [photoLeft, setPhotoLeft] = useState<number | null>(null);
+
+  // Staged progress: the AI call is one opaque request, so we animate a smooth,
+  // honest-feeling progress with human-readable steps while it runs.
+  const [progress, setProgress] = useState(0);
+  const [stageLabel, setStageLabel] = useState("");
+  const progRef = useRef(0);
+  const progTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const STAGES: { until: number; label: string }[] = [
+    { until: 15, label: "Preparing your photo…" },
+    { until: 35, label: "Uploading to the cloud…" },
+    { until: 68, label: "Reading your prayer list…" },
+    { until: 90, label: "Organizing your requests…" },
+    { until: 101, label: "Praying over them 🙏" },
+  ];
+  const labelFor = (p: number) => STAGES.find((s) => p < s.until)?.label ?? STAGES[STAGES.length - 1].label;
+
+  const clearProgTimer = () => {
+    if (progTimer.current) { clearInterval(progTimer.current); progTimer.current = null; }
+  };
+  const startProgress = () => {
+    clearProgTimer();
+    progRef.current = 0;
+    setProgress(0);
+    setStageLabel(STAGES[0].label);
+    progTimer.current = setInterval(() => {
+      // Ease toward 95% and hold there until the real result arrives.
+      const next = Math.min(95, progRef.current + Math.max(0.5, (95 - progRef.current) * 0.04));
+      progRef.current = next;
+      setProgress(next);
+      setStageLabel(labelFor(next));
+    }, 150);
+  };
+  const completeProgress = () => {
+    clearProgTimer();
+    progRef.current = 100;
+    setProgress(100);
+    setStageLabel("Done!");
+  };
+
+  useEffect(() => () => clearProgTimer(), []);
 
   const fieldLabel = mkFieldLabel(Theme);
   const inputStyle = mkInputStyle(Theme);
@@ -88,6 +129,7 @@ export default function ImportScreen() {
 
   const handleExtract = async (mode: Tab) => {
     setBusy(true);
+    startProgress();
     try {
       const result = mode === "photo" ? await importFromPhotos(images, claim) : await importFromText(text, claim);
       if (result.error) {
@@ -99,12 +141,14 @@ export default function ImportScreen() {
         Alert.alert("Nothing found", "No prayer requests were found. Try a clearer photo or paste the text.");
         return;
       }
+      completeProgress();
       if (typeof result.remaining?.photo === "number") setPhotoLeft(result.remaining.photo);
       setRows(result.items.map((it: ImportItem) => ({ id: rid(), title: it.title, description: it.description })));
       analytics.capture("prayer_import_extracted", { mode, count: result.items.length });
     } catch (e: any) {
       Alert.alert("Couldn't import", e?.message ?? "Please try again.");
     } finally {
+      clearProgTimer();
       setBusy(false);
     }
   };
@@ -211,13 +255,17 @@ export default function ImportScreen() {
                 </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => handleExtract("photo")}
-                disabled={busy || images.length === 0 || photoLeft === 0}
-                style={{ backgroundColor: images.length === 0 || photoLeft === 0 ? Theme.cardBorder : Theme.primary, borderRadius: 100, paddingVertical: 16, alignItems: "center", marginTop: 18 }}
-              >
-                {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 16, color: "#FFFFFF" }}>{photoLeft === 0 ? "No scans left this month" : "Scan list"}</Text>}
-              </TouchableOpacity>
+              {busy ? (
+                <ProgressCard progress={progress} label={stageLabel} Theme={Theme} />
+              ) : (
+                <TouchableOpacity
+                  onPress={() => handleExtract("photo")}
+                  disabled={images.length === 0 || photoLeft === 0}
+                  style={{ backgroundColor: images.length === 0 || photoLeft === 0 ? Theme.cardBorder : Theme.primary, borderRadius: 100, paddingVertical: 16, alignItems: "center", marginTop: 18 }}
+                >
+                  <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 16, color: "#FFFFFF" }}>{photoLeft === 0 ? "No scans left this month" : "Scan list"}</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )
         ) : (
@@ -233,17 +281,35 @@ export default function ImportScreen() {
               multiline
               style={[inputStyle, { minHeight: 200, textAlignVertical: "top" }] as any}
             />
-            <TouchableOpacity
-              onPress={() => handleExtract("text")}
-              disabled={busy || !text.trim()}
-              style={{ backgroundColor: !text.trim() ? Theme.cardBorder : Theme.primary, borderRadius: 100, paddingVertical: 16, alignItems: "center", marginTop: 6 }}
-            >
-              {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 16, color: "#FFFFFF" }}>Extract requests</Text>}
-            </TouchableOpacity>
+            {busy ? (
+              <View style={{ marginTop: 6 }}><ProgressCard progress={progress} label={stageLabel} Theme={Theme} /></View>
+            ) : (
+              <TouchableOpacity
+                onPress={() => handleExtract("text")}
+                disabled={!text.trim()}
+                style={{ backgroundColor: !text.trim() ? Theme.cardBorder : Theme.primary, borderRadius: 100, paddingVertical: 16, alignItems: "center", marginTop: 6 }}
+              >
+                <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 16, color: "#FFFFFF" }}>Extract requests</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </ScrollView>
     </KeyboardAvoidingView>
+  );
+}
+
+function ProgressCard({ progress, label, Theme }: { progress: number; label: string; Theme: AppTheme }) {
+  return (
+    <View style={{ marginTop: 18, backgroundColor: Theme.card, borderWidth: 1, borderColor: Theme.cardBorder, borderRadius: Theme.radius.inner, padding: 16, ...Theme.shadow }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 14, color: Theme.text, flex: 1 }} numberOfLines={1}>{label}</Text>
+        <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 14, color: Theme.primary, marginLeft: 10 }}>{Math.round(progress)}%</Text>
+      </View>
+      <View style={{ height: 8, borderRadius: 4, backgroundColor: Theme.primarySoft, overflow: "hidden" }}>
+        <View style={{ height: 8, width: `${Math.max(2, Math.min(100, progress))}%`, backgroundColor: Theme.primary, borderRadius: 4 }} />
+      </View>
+    </View>
   );
 }
 
