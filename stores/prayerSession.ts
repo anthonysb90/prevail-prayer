@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { Audio } from "expo-av";
+import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from "expo-audio";
+import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { BellInterval } from "@/types";
 import { logPrayerSession, updatePrayerStreak } from "@/lib/streak";
 import { analytics } from "@/lib/analytics";
@@ -16,15 +17,30 @@ const FADE_IN_MS = 900;
 const FADE_OUT_END_MS = 1400;
 const FADE_OUT_STOP_MS = 400;
 const STEP_MS = 40;
+const TICK_MS = 250; // finer than 1s so the wall-clock display stays smooth
+// End a session early and you still get credit if you prayed at least this long.
+const PARTIAL_MIN_SECONDS = 180;
+
+// Keep the screen awake only while a session is actively running. Guarded so a
+// double activate/deactivate never throws.
+const KEEP_AWAKE_TAG = "prayer-session";
+function keepAwakeOn() { activateKeepAwakeAsync(KEEP_AWAKE_TAG).catch(() => {}); }
+function keepAwakeOff() { try { deactivateKeepAwake(KEEP_AWAKE_TAG); } catch {} }
 
 // ── Module-level audio + timer (kept out of React state to avoid re-renders) ──
-let ambient: Audio.Sound | null = null;
-let chime: Audio.Sound | null = null;
+let ambient: AudioPlayer | null = null;
+let chime: AudioPlayer | null = null;
 let intervalId: ReturnType<typeof setInterval> | null = null;
 let fadeToken = 0;
 let lastBellMark = -1;
 let audioModeSet = false;
 let sessionUserId: string | null = null;
+
+// Wall-clock anchor: the timestamp (ms) at which the running session should hit
+// zero. Derived remaining = round((endsAt - now)/1000). This survives JS timer
+// suspension (screen lock / backgrounding) and never drifts, unlike counting
+// down by 1 each tick.
+let endsAt = 0;
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const clamp = (v: number) => Math.max(0, Math.min(1, v));
@@ -32,35 +48,40 @@ const clamp = (v: number) => Math.max(0, Math.min(1, v));
 async function ensureAudioMode() {
   if (audioModeSet) return;
   audioModeSet = true;
-  await Audio.setAudioModeAsync({
-    playsInSilentModeIOS: true,
-    staysActiveInBackground: true,
-    shouldDuckAndroid: false,
+  await setAudioModeAsync({
+    playsInSilentMode: true,
+    shouldPlayInBackground: true,
+    interruptionMode: "mixWithOthers",
   }).catch(() => {});
 }
 
-async function ensureChime() {
+function ensureChime() {
   if (chime) return;
   try {
-    const { sound } = await Audio.Sound.createAsync(CHIME, { volume: 0.8 });
-    chime = sound;
+    chime = createAudioPlayer(CHIME);
+    chime.volume = 0.8;
   } catch {}
 }
 
-async function playChime() {
-  await ensureChime();
+function playChime() {
+  ensureChime();
   if (!chime) return;
-  try { await chime.setPositionAsync(0); await chime.playAsync(); } catch {}
+  try { chime.seekTo(0); chime.play(); } catch {}
 }
 
-async function ramp(sound: Audio.Sound, from: number, to: number, ms: number, alive: () => boolean) {
+async function ramp(player: AudioPlayer, from: number, to: number, ms: number, alive: () => boolean) {
   const steps = Math.max(1, Math.round(ms / STEP_MS));
   for (let i = 1; i <= steps; i++) {
     if (!alive()) return;
     const v = from + (to - from) * (i / steps);
-    try { await sound.setVolumeAsync(clamp(v)); } catch {}
+    try { player.volume = clamp(v); } catch {}
     await sleep(STEP_MS);
   }
+}
+
+function removePlayer(p: AudioPlayer | null) {
+  if (!p) return;
+  try { p.remove(); } catch {}
 }
 
 /** Load + crossfade to a new source. If running, the new track fades in while
@@ -71,21 +92,31 @@ async function loadSource(source: AmbientSource, running: boolean) {
   const previous = ambient;
 
   if (!source) {
-    if (previous) { await ramp(previous, TARGET_VOLUME, 0, CROSSFADE_MS, alive); await previous.unloadAsync().catch(() => {}); }
+    if (previous) { await ramp(previous, TARGET_VOLUME, 0, CROSSFADE_MS, alive); removePlayer(previous); }
     if (alive()) ambient = null;
     return;
   }
 
-  const { sound } = await Audio.Sound.createAsync(source, { isLooping: true, volume: 0, shouldPlay: running });
-  if (!alive()) { await sound.unloadAsync().catch(() => {}); return; }
+  let sound: AudioPlayer;
+  try {
+    sound = createAudioPlayer(source);
+    sound.loop = true;
+    sound.volume = 0;
+  } catch {
+    return;
+  }
+  if (!alive()) { removePlayer(sound); return; }
   ambient = sound;
+  if (running) { try { sound.play(); } catch {} }
 
   if (running) {
     const fadeIn = ramp(sound, 0, TARGET_VOLUME, CROSSFADE_MS, alive);
-    const fadeOut = previous ? ramp(previous, TARGET_VOLUME, 0, CROSSFADE_MS, alive).then(() => previous.unloadAsync().catch(() => {})) : Promise.resolve();
+    const fadeOut = previous
+      ? ramp(previous, TARGET_VOLUME, 0, CROSSFADE_MS, alive).then(() => removePlayer(previous))
+      : Promise.resolve();
     await Promise.all([fadeIn, fadeOut]);
   } else if (previous) {
-    await previous.unloadAsync().catch(() => {});
+    removePlayer(previous);
   }
 }
 
@@ -94,10 +125,10 @@ function clearTick() { if (intervalId) { clearInterval(intervalId); intervalId =
 function maybeBell(elapsed: number, bell: BellInterval) {
   if (bell === "5min") {
     const mark = Math.floor(elapsed / 300);
-    if (mark > 0 && mark !== lastBellMark) { lastBellMark = mark; void playChime(); }
+    if (mark > 0 && mark !== lastBellMark) { lastBellMark = mark; playChime(); }
   } else if (bell === "10min") {
     const mark = Math.floor(elapsed / 600);
-    if (mark > 0 && mark !== lastBellMark) { lastBellMark = mark; void playChime(); }
+    if (mark > 0 && mark !== lastBellMark) { lastBellMark = mark; playChime(); }
   }
 }
 
@@ -106,23 +137,26 @@ function startTick() {
   intervalId = setInterval(() => {
     const s = usePrayerSession.getState();
     if (!s.running) return;
-    const next = s.remaining - 1;
-    if (next <= 0) {
+    // Derive remaining from the wall clock instead of decrementing. If JS was
+    // suspended (lock/background), this catches up to the true value on resume.
+    const remaining = Math.max(0, Math.round((endsAt - Date.now()) / 1000));
+    if (remaining <= 0) {
       usePrayerSession.setState({ remaining: 0 });
       void completeSession();
       return;
     }
-    usePrayerSession.setState({ remaining: next });
-    maybeBell(s.duration - next, s.bellInterval);
-  }, 1000);
+    if (remaining !== s.remaining) usePrayerSession.setState({ remaining });
+    maybeBell(s.duration - remaining, s.bellInterval);
+  }, TICK_MS);
 }
 
 async function completeSession() {
   clearTick();
+  keepAwakeOff();
   const s = usePrayerSession.getState();
   usePrayerSession.setState({ running: false, completed: true });
 
-  if (s.bellInterval !== "off") void playChime();
+  if (s.bellInterval !== "off") playChime();
 
   // Gentle fade out + stop the music.
   const token = ++fadeToken;
@@ -130,7 +164,7 @@ async function completeSession() {
   if (ambient) {
     const a = ambient;
     await ramp(a, TARGET_VOLUME, 0, FADE_OUT_END_MS, alive);
-    if (alive()) { try { await a.pauseAsync(); } catch {} }
+    if (alive()) { try { a.pause(); } catch {} }
   }
 
   // Record the session (full duration was prayed).
@@ -190,11 +224,13 @@ export const usePrayerSession = create<PrayerSessionState>((set, get) => ({
 
   start: async (userId) => {
     await ensureAudioMode();
-    void ensureChime();
+    ensureChime();
     sessionUserId = userId;
     lastBellMark = -1;
     const { duration, source } = get();
+    endsAt = Date.now() + duration * 1000;
     set({ active: true, running: true, completed: false, remaining: duration });
+    keepAwakeOn();
     await loadSource(source, true);
     // Fade in (loadSource created at vol 0 and started playing).
     if (ambient) {
@@ -207,38 +243,62 @@ export const usePrayerSession = create<PrayerSessionState>((set, get) => ({
 
   pause: async () => {
     if (!get().running) return;
-    set({ running: false });
+    // Freeze remaining from the wall clock, then stop the clock.
+    const remaining = Math.max(0, Math.round((endsAt - Date.now()) / 1000));
+    set({ running: false, remaining });
     clearTick();
+    keepAwakeOff();
     if (ambient) {
       const a = ambient;
       const token = ++fadeToken;
       const alive = () => fadeToken === token;
       await ramp(a, TARGET_VOLUME, 0, FADE_OUT_STOP_MS, alive);
-      if (alive()) { try { await a.pauseAsync(); } catch {} }
+      if (alive()) { try { a.pause(); } catch {} }
     }
   },
 
   resume: async () => {
     if (get().running || get().completed) return;
+    // Re-anchor the wall clock to the frozen remaining.
+    endsAt = Date.now() + get().remaining * 1000;
     set({ running: true });
+    keepAwakeOn();
     if (ambient) {
       const a = ambient;
       const token = ++fadeToken;
       const alive = () => fadeToken === token;
-      try { await a.playAsync(); } catch {}
+      try { a.play(); } catch {}
       void ramp(a, 0, TARGET_VOLUME, FADE_IN_MS, alive);
     }
     startTick();
   },
 
   stop: async () => {
+    const s = get();
+    // How much was actually prayed. If still running, read the live wall clock.
+    const remaining = s.running ? Math.max(0, Math.round((endsAt - Date.now()) / 1000)) : s.remaining;
+    const elapsed = s.duration - remaining;
+    const shouldLog = s.active && !s.completed && elapsed >= PARTIAL_MIN_SECONDS;
+
     clearTick();
+    keepAwakeOff();
     fadeToken++;
-    if (ambient) { const a = ambient; ambient = null; try { await a.stopAsync(); } catch {} await a.unloadAsync().catch(() => {}); }
-    set({ active: false, running: false, completed: false, remaining: get().duration });
+    if (ambient) { const a = ambient; ambient = null; try { a.pause(); } catch {} removePlayer(a); }
+    set({ active: false, running: false, completed: false, remaining: s.duration });
+
+    // Credit a partial session so ending early still counts toward the streak.
+    if (shouldLog && sessionUserId) {
+      const uid = sessionUserId;
+      try {
+        await logPrayerSession(uid, elapsed, s.trackId);
+        await updatePrayerStreak(uid);
+        analytics.capture("prayer_session_partial", { duration_seconds: elapsed, track: s.trackId, bell: s.bellInterval });
+      } catch {}
+    }
   },
 
   reset: () => {
+    keepAwakeOff();
     set({ active: false, running: false, completed: false, remaining: get().duration });
   },
 }));

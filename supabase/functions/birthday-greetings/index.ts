@@ -28,9 +28,10 @@ interface ExpoMessage {
 }
 
 Deno.serve(async (req: Request) => {
-  // Lightweight auth: the daily cron passes a shared secret.
+  // Auth: the daily cron passes a shared secret. Fail closed — if the secret is
+  // not configured, or the header doesn't match, reject. Never run open.
   const secret = Deno.env.get("BIRTHDAY_CRON_SECRET");
-  if (secret && req.headers.get("x-birthday-secret") !== secret) {
+  if (!secret || req.headers.get("x-birthday-secret") !== secret) {
     return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401,
       headers: { "Content-Type": "application/json" },

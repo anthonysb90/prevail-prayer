@@ -9,7 +9,7 @@ import * as Notifications from "expo-notifications";
 import { PremiumGate } from "@/components/ui/PremiumGate";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
-import { scheduleLocalReminder, cancelReminder } from "@/lib/notifications";
+import { scheduleLocalReminder, cancelReminder, requestPushPermission } from "@/lib/notifications";
 import { format } from "date-fns";
 import { useTheme } from "@/hooks/useTheme";
 
@@ -142,6 +142,17 @@ function RemindersContent() {
     }
     if (!user) return;
     setSaving(true);
+
+    // Ask for notification permission here — the first time it's actually needed —
+    // rather than cold at login. If denied, the reminder is still saved so it
+    // works once the user enables notifications in Settings.
+    const granted = await requestPushPermission(user.id);
+    if (!granted) {
+      Alert.alert(
+        "Notifications are off",
+        "Your reminder is saved, but you won't get an alert until you turn on notifications for Prevail Prayer in your device Settings."
+      );
+    }
 
     const row = {
       recurrence_type: recurrence,

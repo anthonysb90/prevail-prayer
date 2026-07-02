@@ -118,46 +118,47 @@ function AuthGuard() {
   }, []);
 
   useEffect(() => {
+    // Single source of truth for session state. onAuthStateChange fires an
+    // INITIAL_SESSION event on subscribe carrying the current session, so we no
+    // longer need a separate getSession() call doing the same work twice.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (event, session) => {
         setSession(session);
-        if (_event === "PASSWORD_RECOVERY") {
+        if (event === "PASSWORD_RECOVERY") {
           router.replace("/(auth)/reset");
           setIsLoading(false);
           return;
         }
-        if (session?.user) {
-          await fetchProfile(session.user.id);
-          await useThemeStore.getState().hydrate(useAuthStore.getState().profile?.theme_pref);
-          // Initialize RevenueCat
-          await initializePurchases(session.user.id);
-          rcPremiumRef.current = await getSubscriptionStatus();
-          recomputePremium();
-          ensurePremiumListener();
-          // Register push token — saves to Supabase so admin panel can send notifications
-          await registerPushToken(session.user.id);
+        if (!session?.user) {
           setIsLoading(false);
-        } else {
-          setIsLoading(false);
+          return;
         }
+        // Defer the async work outside the callback. Awaiting Supabase calls
+        // directly inside onAuthStateChange can deadlock token refresh, so we
+        // hop out with setTimeout(0) before touching the network.
+        const userId = session.user.id;
+        setTimeout(() => {
+          void (async () => {
+            try {
+              // Independent work runs in parallel instead of serially.
+              await Promise.all([
+                fetchProfile(userId),
+                initializePurchases(userId),
+              ]);
+              await useThemeStore.getState().hydrate(useAuthStore.getState().profile?.theme_pref);
+              rcPremiumRef.current = await getSubscriptionStatus();
+              recomputePremium();
+              ensurePremiumListener();
+              // Fire-and-forget — never block readiness on push or reminders.
+              void registerPushToken(userId);
+              if (event === "INITIAL_SESSION") rescheduleAllReminders(userId);
+            } finally {
+              setIsLoading(false);
+            }
+          })();
+        }, 0);
       }
     );
-
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        await fetchProfile(session.user.id);
-        await useThemeStore.getState().hydrate(useAuthStore.getState().profile?.theme_pref);
-        await initializePurchases(session.user.id);
-        rcPremiumRef.current = await getSubscriptionStatus();
-        recomputePremium();
-        ensurePremiumListener();
-        await registerPushToken(session.user.id);
-        // Re-arm per-prayer reminders (e.g. after a reinstall) without blocking launch.
-        rescheduleAllReminders(session.user.id);
-      }
-      setIsLoading(false);
-    });
 
     return () => {
       subscription.unsubscribe();
