@@ -69,7 +69,7 @@ export default function PersonalizeScreen() {
           </View>
           <Text style={{ fontFamily: Theme.font.serif, fontSize: 30, color: Theme.text, marginBottom: 12 }}>One last thing.</Text>
           <Text style={{ fontFamily: Theme.font.sans, fontSize: 16, color: Theme.textMuted, lineHeight: 24, marginBottom: 32 }}>
-            Tell us your name so we can personalize your experience. Phone and zip are optional and help your church stay connected.
+            Tell us your name so we can personalize your experience. Phone and zip are optional and help us stay connected with you.
           </Text>
 
           <View style={{ flexDirection: "row", gap: 12, marginBottom: 18 }}>

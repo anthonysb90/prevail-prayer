@@ -9,6 +9,7 @@ import { useActivePrayers, useOngoingPrayers } from "@/hooks/usePrayers";
 import { PrayerRequest } from "@/types";
 import { useTheme } from "@/hooks/useTheme";
 import { Icon } from "@/components/ui/Icon";
+import { PrivacyNote } from "@/components/ui/PrivacyNote";
 
 export default function NewJournalEntryScreen() {
     const Theme = useTheme();
@@ -73,6 +74,10 @@ export default function NewJournalEntryScreen() {
         </View>
       ) : (
         <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
+          <PrivacyNote
+            text="Your journal is completely private. No one else can read your entries — only you."
+            style={{ marginHorizontal: 22, marginBottom: 12 }}
+          />
           <TextInput
             style={{ paddingHorizontal: 22, fontFamily: Theme.font.serif, fontSize: 24, color: Theme.text, marginBottom: 4 }}
             placeholder="Title (optional)" placeholderTextColor={Theme.textFaint}

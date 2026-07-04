@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, Modal, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, Modal, Alert, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
@@ -61,7 +61,17 @@ export function PhonePromptModal() {
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={dismiss}>
-      <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.45)" }}>
+      {/* KeyboardAvoidingView lifts the sheet above the number pad so the buttons stay reachable. */}
+      <KeyboardAvoidingView
+        style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.45)" }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView
+          style={{ flexGrow: 0, maxHeight: "85%" }}
+          contentContainerStyle={{ flexGrow: 0 }}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
+        >
         <View style={{ backgroundColor: Theme.bg, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, paddingBottom: 44 }}>
           <View style={{ alignItems: "center", marginBottom: 18 }}>
             <View style={{ width: 56, height: 56, borderRadius: 18, backgroundColor: Theme.primary, alignItems: "center", justifyContent: "center" }}>
@@ -70,7 +80,7 @@ export function PhonePromptModal() {
           </View>
           <Text style={{ fontFamily: Theme.font.serif, fontSize: 22, color: Theme.text, textAlign: "center", marginBottom: 8 }}>Stay connected</Text>
           <Text style={{ fontFamily: Theme.font.sans, fontSize: 15, color: Theme.textMuted, textAlign: "center", lineHeight: 22, marginBottom: 22 }}>
-            Add your phone number so your church can reach you for prayer, encouragement, and important updates. Optional, and never shared.
+            Add your phone number so the Prevail Prayer team can reach you with encouragement and important updates. Optional, and never shared.
           </Text>
           <TextInput
             value={phone}
@@ -87,7 +97,8 @@ export function PhonePromptModal() {
             <Text style={{ fontFamily: Theme.font.sans, fontSize: 14, color: Theme.textFaint }}>Not now</Text>
           </TouchableOpacity>
         </View>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

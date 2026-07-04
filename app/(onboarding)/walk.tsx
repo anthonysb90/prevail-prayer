@@ -53,37 +53,38 @@ export default function WalkScreen() {
         </Text>
       </TouchableOpacity>
 
-      <Text
-        style={{
-          fontFamily: "Newsreader_600SemiBold",
-          fontSize: 30,
-          color: "#1D1B26",
-          textAlign: "center",
-          lineHeight: 38,
-          marginBottom: 10,
-        }}
-      >
-        How's your walk with the Lord these days?
-      </Text>
-
-      <Text
-        style={{
-          fontFamily: "HankenGrotesk_400Regular",
-          fontSize: 14,
-          color: "#9794A4",
-          textAlign: "center",
-          marginBottom: 28,
-          lineHeight: 20,
-        }}
-      >
-        Your answers help us personalize Prevail Prayer for you.
-      </Text>
-
+      {/* Title lives inside the ScrollView so everything stays reachable at large text sizes / zoom. */}
       <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 20 }}
       >
+        <Text
+          style={{
+            fontFamily: "Newsreader_600SemiBold",
+            fontSize: 30,
+            color: "#1D1B26",
+            textAlign: "center",
+            lineHeight: 38,
+            marginBottom: 10,
+          }}
+        >
+          How's your walk with the Lord these days?
+        </Text>
+
+        <Text
+          style={{
+            fontFamily: "HankenGrotesk_400Regular",
+            fontSize: 14,
+            color: "#9794A4",
+            textAlign: "center",
+            marginBottom: 28,
+            lineHeight: 20,
+          }}
+        >
+          Your answers help us personalize Prevail Prayer for you.
+        </Text>
+
         <View style={{ gap: 10 }}>
           {OPTIONS.map((option) => {
             const isSelected = selected.includes(option);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, Modal } from "react-native";
+import { View, Text, TouchableOpacity, Modal, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as SecureStore from "expo-secure-store";
 import { useAuthStore } from "@/stores/authStore";
@@ -60,8 +60,16 @@ export function TrialWelcomeModal() {
           backgroundColor: "rgba(29,27,38,0.55)",
           justifyContent: "center",
           paddingHorizontal: 28,
+          paddingVertical: 40,
         }}
       >
+        {/* Scrollable so the dismiss button stays reachable at large text sizes / zoom. */}
+        <ScrollView
+          style={{ flexGrow: 0, maxHeight: "100%", borderRadius: 28 }}
+          contentContainerStyle={{ flexGrow: 0 }}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
         <View style={{ backgroundColor: "#F1EFF9", borderRadius: 28, overflow: "hidden" }}>
           {/* Indigo header */}
           <View style={{ backgroundColor: "#5B53C6", alignItems: "center", paddingTop: 32, paddingBottom: 28, paddingHorizontal: 24 }}>
@@ -166,6 +174,7 @@ export function TrialWelcomeModal() {
             </Text>
           </View>
         </View>
+        </ScrollView>
       </View>
     </Modal>
   );

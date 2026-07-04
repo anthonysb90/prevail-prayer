@@ -14,6 +14,11 @@ import { analytics } from "@/lib/analytics";
 import { PhotoPickerField } from "@/components/prayer/PhotoPickerField";
 import { uploadPrayerImage } from "@/lib/prayerImages";
 import { useAuthStore } from "@/stores/authStore";
+import { PrivacyNote } from "@/components/ui/PrivacyNote";
+import {
+  ReminderPickerModal, ensureNotificationPermission, reminderDraftLabel, type ReminderDraft,
+} from "@/components/prayer/ReminderPickerModal";
+import { createReminder } from "@/lib/prayerReminders";
 
 const STATUS_OPTIONS: { value: PrayerStatus; label: string }[] = [
   { value: "active", label: "Active" },
@@ -59,6 +64,13 @@ export default function NewPrayerScreen() {
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [newCat, setNewCat] = useState("");
+  const [reminder, setReminder] = useState<ReminderDraft | null>(null);
+  const [showReminderModal, setShowReminderModal] = useState(false);
+
+  const openReminderPicker = async () => {
+    if (!(await ensureNotificationPermission())) return;
+    setShowReminderModal(true);
+  };
 
   const toggleCategory = (id: string) =>
     setSelectedCategoryIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
@@ -83,8 +95,21 @@ export default function NewPrayerScreen() {
         image_path = await uploadPrayerImage(user.id, imageUri);
         if (!image_path) Alert.alert("Photo couldn't be uploaded", "Your request will be saved without the photo.");
       }
-      await createPrayer.mutateAsync({ title, description, status, is_urgent: isUrgent, categoryIds: selectedCategoryIds, image_path });
+      const created = await createPrayer.mutateAsync({ title, description, status, is_urgent: isUrgent, categoryIds: selectedCategoryIds, image_path });
       analytics.capture("prayer_added", { is_urgent: isUrgent, status });
+      // Schedule the reminder the user configured (if any) now that the request has an id.
+      if (reminder && user && created?.id) {
+        try {
+          if (reminder.scheduleType === "once" && reminder.fireAt && reminder.fireAt.getTime() < Date.now() + 30_000) {
+            Alert.alert("Reminder not set", "The reminder time has already passed. Your request was saved — you can add a new reminder from the request.");
+          } else {
+            await createReminder(user.id, { prayerId: created.id, ...reminder }, title, description?.trim() || null);
+            analytics.capture("prayer_reminder_added_on_create", { schedule: reminder.scheduleType });
+          }
+        } catch {
+          Alert.alert("Reminder not set", "Your request was saved, but the reminder couldn't be scheduled. You can add it from the request.");
+        }
+      }
       router.back();
     } catch (e: any) {
       Alert.alert("Error saving prayer request", e.message);
@@ -103,6 +128,10 @@ export default function NewPrayerScreen() {
       </View>
 
       <ScrollView style={{ flex: 1, paddingHorizontal: 22 }} keyboardShouldPersistTaps="handled">
+        <PrivacyNote
+          text="Completely private. No one else can see your prayer requests — only you."
+          style={{ marginBottom: 14 }}
+        />
         <TextInput
           style={inputStyle as any}
           placeholder="What are you praying for?"
@@ -135,6 +164,38 @@ export default function NewPrayerScreen() {
           <Icon name="flame" size={20} color={isUrgent ? Theme.urgent : Theme.textFaint} />
           <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 15, color: isUrgent ? Theme.urgent : Theme.textMuted }}>Mark as Urgent</Text>
         </TouchableOpacity>
+
+        <Text style={fieldLabel}>Reminder</Text>
+        {reminder ? (
+          <View
+            style={{
+              flexDirection: "row", alignItems: "center", gap: 12,
+              backgroundColor: Theme.card, borderWidth: 1, borderColor: Theme.cardBorder,
+              borderRadius: Theme.radius.inner, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 20,
+            }}
+          >
+            <Icon name="bell" size={20} color={Theme.primary} />
+            <TouchableOpacity onPress={openReminderPicker} style={{ flex: 1 }}>
+              <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 15, color: Theme.text }}>{reminderDraftLabel(reminder)}</Text>
+              <Text style={{ fontFamily: Theme.font.sans, fontSize: 12, color: Theme.textFaint, marginTop: 1 }}>Set when you save this request. Tap to change.</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setReminder(null)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Icon name="x" size={18} color={Theme.textFaint} />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            onPress={openReminderPicker}
+            style={{
+              flexDirection: "row", alignItems: "center", gap: 12,
+              backgroundColor: Theme.card, borderWidth: 1, borderColor: Theme.cardBorder,
+              borderRadius: Theme.radius.inner, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 20,
+            }}
+          >
+            <Icon name="bell" size={20} color={Theme.textFaint} />
+            <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 15, color: Theme.textMuted }}>Remind me to pray for this</Text>
+          </TouchableOpacity>
+        )}
 
         <Text style={fieldLabel}>Request Type</Text>
         <View style={{ flexDirection: "row", gap: 10, marginBottom: 22 }}>
@@ -192,6 +253,13 @@ export default function NewPrayerScreen() {
           </View>
         )}
       </ScrollView>
+
+      <ReminderPickerModal
+        visible={showReminderModal}
+        title={title.trim() || "Your prayer request"}
+        onClose={() => setShowReminderModal(false)}
+        onSave={(draft) => { setReminder(draft); setShowReminderModal(false); }}
+      />
     </KeyboardAvoidingView>
   );
 }

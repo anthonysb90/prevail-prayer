@@ -13,6 +13,7 @@ import { Icon } from "@/components/ui/Icon";
 import { PhotoPickerField } from "@/components/prayer/PhotoPickerField";
 import { uploadPrayerImage, removePrayerImage } from "@/lib/prayerImages";
 import { useAuthStore } from "@/stores/authStore";
+import { PrivacyNote } from "@/components/ui/PrivacyNote";
 
 const STATUS_OPTIONS: { value: PrayerStatus; label: string }[] = [
   { value: "active", label: "Active" },
@@ -122,6 +123,10 @@ function EditForm({ prayerId }: { prayerId: string }) {
       </View>
 
       <ScrollView style={{ flex: 1, paddingHorizontal: 22 }} keyboardShouldPersistTaps="handled">
+        <PrivacyNote
+          text="Completely private. No one else can see your prayer requests — only you."
+          style={{ marginBottom: 14 }}
+        />
         <TextInput
           style={inputStyle as any}
           placeholder="What are you praying for?" placeholderTextColor={Theme.textFaint}

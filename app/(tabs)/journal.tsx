@@ -6,6 +6,7 @@ import { useJournalEntries } from "@/hooks/useJournal";
 import { JournalEntry } from "@/types";
 import { useTheme } from "@/hooks/useTheme";
 import { Icon } from "@/components/ui/Icon";
+import { PrivacyNote } from "@/components/ui/PrivacyNote";
 
 function JournalContent() {
     const Theme = useTheme();
@@ -48,6 +49,10 @@ function JournalContent() {
           <Text style={{ fontFamily: Theme.font.sans, fontSize: 15, color: Theme.textMuted, textAlign: "center", marginTop: 14, lineHeight: 22 }}>
             Your journal is empty.{"\n"}Start writing about what God is doing.
           </Text>
+          <PrivacyNote
+            text="Completely private. No one else can read your journal — only you."
+            style={{ marginTop: 14, maxWidth: 280 }}
+          />
           <TouchableOpacity
             onPress={() => router.push("/journal/new")}
             style={{ marginTop: 22, backgroundColor: Theme.primary, borderRadius: Theme.radius.pill, paddingVertical: 13, paddingHorizontal: 26 }}
@@ -60,9 +65,13 @@ function JournalContent() {
           contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 16, paddingBottom: 36 }}
           refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={Theme.primary} />}
         >
-          <Text style={{ fontFamily: Theme.font.serifReg, fontSize: 16, color: Theme.textMuted, marginBottom: 16, lineHeight: 23 }}>
+          <Text style={{ fontFamily: Theme.font.serifReg, fontSize: 16, color: Theme.textMuted, marginBottom: 8, lineHeight: 23 }}>
             A quiet place to reflect, record, and remember what He's doing.
           </Text>
+          <PrivacyNote
+            text="Completely private. No one else can read your journal — only you."
+            style={{ marginBottom: 16 }}
+          />
           {entries.map((entry: JournalEntry) => (
             <JournalCard key={entry.id} entry={entry} />
           ))}
@@ -76,7 +85,7 @@ export default function JournalScreen() {
   return (
     <PremiumGate
       feature="Prayer Journal"
-      description="Record your reflections, answered prayers, and what God is speaking to you. Linked directly to your prayer requests."
+      description="Record your reflections, answered prayers, and what God is speaking to you. Linked directly to your prayer requests. Completely private — only you can read it."
       icon="book-outline"
     >
       <JournalContent />

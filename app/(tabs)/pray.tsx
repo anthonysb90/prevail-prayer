@@ -14,6 +14,7 @@ import { useSignedImage } from "@/hooks/useSignedImage";
 import { supabase } from "@/lib/supabase";
 import { uploadPrayerImage, removePrayerImage } from "@/lib/prayerImages";
 import { exportPrayerListPdf } from "@/lib/exportPrayerListPdf";
+import { PrivacyNote } from "@/components/ui/PrivacyNote";
 
 export default function PrayScreen() {
     const Theme = useTheme();
@@ -151,6 +152,12 @@ export default function PrayScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        <PrivacyNote
+          dark
+          text="Completely private. No one else can see your prayer list — only you."
+          style={{ marginTop: 10 }}
+        />
 
         {/* Filter chips */}
         {tags.length > 0 && (
