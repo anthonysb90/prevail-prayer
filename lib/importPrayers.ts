@@ -12,8 +12,10 @@ export interface ImportResult {
   error?: string;
   code?: string;
 }
-/** The app's own view of the caller's status, used as a fallback when the
- *  server can't verify the subscription via RevenueCat. */
+/** The app's own view of the caller's status. NOTE: the server no longer
+ *  trusts these fields — it verifies comp/RevenueCat/trial entirely
+ *  server-side. Still sent for backward compatibility with older function
+ *  deployments; safe to remove once the updated function is live. */
 export interface ImportClaim {
   premium: boolean;
   trial: boolean;

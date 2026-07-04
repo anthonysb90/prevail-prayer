@@ -257,10 +257,10 @@ function RemindersContent() {
                   <Text style={{ fontFamily: "HankenGrotesk_400Regular", fontSize: 12, color: Theme.textFaint, marginTop: 2 }}>Tap to edit</Text>
                 </View>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleToggle(r)} style={{ marginRight: 12 }}>
+              <TouchableOpacity onPress={() => handleToggle(r)} style={{ marginRight: 12 }} hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}>
                 <Ionicons name={r.is_active ? "toggle" : "toggle-outline"} size={28} color={r.is_active ? Theme.primary : Theme.textFaint} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleDelete(r)}>
+              <TouchableOpacity onPress={() => handleDelete(r)} hitSlop={{ top: 14, bottom: 14, left: 10, right: 14 }}>
                 <Ionicons name="trash-outline" size={18} color={Theme.textFaint} />
               </TouchableOpacity>
             </View>

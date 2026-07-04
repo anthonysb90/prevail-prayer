@@ -115,6 +115,21 @@ export async function deleteReminder(reminder: PrayerReminder): Promise<void> {
   await supabase.from("prayer_reminders").delete().eq("id", reminder.id);
 }
 
+/**
+ * Cancel the on-device notifications for every reminder attached to a prayer.
+ * Call BEFORE deleting the prayer row — the DB rows cascade with the prayer,
+ * but the local notifications don't and would keep firing for a request that
+ * no longer exists.
+ */
+export async function cancelLocalRemindersForPrayer(prayerId: string): Promise<void> {
+  try {
+    const reminders = await listReminders(prayerId);
+    await Promise.all(reminders.map((r) => cancelReminder(idFor(r.id))));
+  } catch (e) {
+    console.warn("cancelLocalRemindersForPrayer failed", e instanceof Error ? e.message : e);
+  }
+}
+
 /** Re-schedule all of the user's enabled reminders (e.g. after a reinstall). */
 export async function rescheduleAllReminders(userId: string): Promise<void> {
   try {

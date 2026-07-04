@@ -3,8 +3,11 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useVersesByTopic, useFavoriteVerseIds, useToggleFavorite } from "@/hooks/useScripture";
 import { ScriptureVerse } from "@/types";
+import { useTheme } from "@/hooks/useTheme";
+import { AppTheme } from "@/constants/theme";
 
 export default function TopicScreen() {
+  const Theme = useTheme();
   const router = useRouter();
   const { topic } = useLocalSearchParams<{ topic: string }>();
   const { data: verses = [], isLoading } = useVersesByTopic(topic);
@@ -12,7 +15,7 @@ export default function TopicScreen() {
   const toggleFavorite = useToggleFavorite();
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#F1EFF9" }}>
+    <View style={{ flex: 1, backgroundColor: Theme.bg }}>
       {/* Header */}
       <View
         style={{
@@ -23,17 +26,17 @@ export default function TopicScreen() {
           alignItems: "center",
         }}
       >
-        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
-          <Ionicons name="arrow-back" size={22} color="#5A5666" />
+        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Ionicons name="arrow-back" size={22} color={Theme.textMuted} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text
-            style={{ fontFamily: "HankenGrotesk_400Regular", fontSize: 12, color: "#9794A4", textTransform: "uppercase", letterSpacing: 0.5 }}
+            style={{ fontFamily: Theme.font.sans, fontSize: 12, color: Theme.textFaint, textTransform: "uppercase", letterSpacing: 0.5 }}
           >
             Scripture
           </Text>
           <Text
-            style={{ fontFamily: "Newsreader_600SemiBold", fontSize: 26, color: "#1D1B26" }}
+            style={{ fontFamily: Theme.font.serif, fontSize: 26, color: Theme.text }}
           >
             {topic}
           </Text>
@@ -42,12 +45,12 @@ export default function TopicScreen() {
 
       {isLoading ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator color="#5B53C6" />
+          <ActivityIndicator color={Theme.primary} />
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
           <Text
-            style={{ fontFamily: "HankenGrotesk_400Regular", fontSize: 13, color: "#9794A4", marginBottom: 20 }}
+            style={{ fontFamily: Theme.font.sans, fontSize: 13, color: Theme.textFaint, marginBottom: 20 }}
           >
             {verses.length} {verses.length === 1 ? "verse" : "verses"} · King James Version
           </Text>
@@ -57,6 +60,7 @@ export default function TopicScreen() {
             return (
               <VerseCard
                 key={verse.id}
+                Theme={Theme}
                 verse={verse}
                 isFavorited={isFavorited}
                 onToggleFavorite={() =>
@@ -72,10 +76,12 @@ export default function TopicScreen() {
 }
 
 function VerseCard({
+  Theme,
   verse,
   isFavorited,
   onToggleFavorite,
 }: {
+  Theme: AppTheme;
   verse: ScriptureVerse;
   isFavorited: boolean;
   onToggleFavorite: () => void;
@@ -83,10 +89,12 @@ function VerseCard({
   return (
     <View
       style={{
-        backgroundColor: "#FFFFFF",
+        backgroundColor: Theme.card,
         borderRadius: 18,
         padding: 20,
         marginBottom: 12,
+        borderWidth: 1,
+        borderColor: Theme.cardBorder,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.04,
@@ -98,23 +106,23 @@ function VerseCard({
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
         <View
           style={{
-            backgroundColor: "#ECEAFA",
+            backgroundColor: Theme.primarySoft,
             borderRadius: 100,
             paddingHorizontal: 12,
             paddingVertical: 5,
           }}
         >
           <Text
-            style={{ fontFamily: "HankenGrotesk_600SemiBold", fontSize: 13, color: "#5B53C6" }}
+            style={{ fontFamily: Theme.font.sansSemi, fontSize: 13, color: Theme.primary }}
           >
             {verse.reference}
           </Text>
         </View>
-        <TouchableOpacity onPress={onToggleFavorite} style={{ padding: 4 }}>
+        <TouchableOpacity onPress={onToggleFavorite} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons
             name={isFavorited ? "heart" : "heart-outline"}
             size={22}
-            color={isFavorited ? "#E0556B" : "#9794A4"}
+            color={isFavorited ? Theme.urgent : Theme.textFaint}
           />
         </TouchableOpacity>
       </View>
@@ -122,9 +130,9 @@ function VerseCard({
       {/* Verse text */}
       <Text
         style={{
-          fontFamily: "Newsreader_500Medium",
+          fontFamily: Theme.font.serifMed,
           fontSize: 16,
-          color: "#1D1B26",
+          color: Theme.text,
           lineHeight: 26,
           fontStyle: "italic",
         }}

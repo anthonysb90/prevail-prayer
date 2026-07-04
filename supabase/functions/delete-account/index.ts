@@ -44,8 +44,39 @@ Deno.serve(async (req: Request) => {
     await admin.from("deleted_emails").insert({ user_id: user.id, email: user.email });
   }
 
+  // Delete the user's storage objects. DB rows cascade with auth.users, but
+  // storage objects do NOT — without this, prayer photos and avatars would
+  // outlive the account, breaking the "permanently deletes your data" promise.
+  await deleteUserStorage(admin, user.id, "prayer-images");
+  await deleteUserStorage(admin, user.id, "avatars");
+
   const { error: delErr } = await admin.auth.admin.deleteUser(user.id);
   if (delErr) return json({ error: delErr.message }, 500);
 
   return json({ ok: true });
 });
+
+/** Remove every object under `<userId>/` in a bucket (paginated, best effort). */
+async function deleteUserStorage(
+  admin: ReturnType<typeof createClient>,
+  userId: string,
+  bucket: string,
+): Promise<void> {
+  try {
+    // list() returns up to `limit` objects; after each remove, list again from
+    // the start until the folder is empty (with a safety cap on iterations).
+    for (let i = 0; i < 50; i++) {
+      const { data: files, error } = await admin.storage
+        .from(bucket)
+        .list(userId, { limit: 100 });
+      if (error || !files || files.length === 0) break;
+      const paths = files.map((f: { name: string }) => `${userId}/${f.name}`);
+      const { error: rmErr } = await admin.storage.from(bucket).remove(paths);
+      if (rmErr) break;
+      if (files.length < 100) break;
+    }
+  } catch (e) {
+    // Best effort — never block account deletion on storage cleanup.
+    console.warn(`storage cleanup failed for ${bucket}:`, e instanceof Error ? e.message : e);
+  }
+}

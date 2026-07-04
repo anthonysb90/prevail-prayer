@@ -49,7 +49,25 @@ export async function getDownloadedMap(): Promise<Registry> {
     } catch {}
   }
   if (Object.keys(out).length !== Object.keys(reg).length) await writeReg(out);
+  pruneOrphanedFiles(out); // fire-and-forget disk hygiene
   return out;
+}
+
+/**
+ * Delete files in the music folder that aren't in the registry (e.g. left
+ * behind by interrupted downloads or a cleared registry) so the on-device
+ * cache can't grow unbounded. Best effort, runs in the background.
+ */
+async function pruneOrphanedFiles(reg: Registry): Promise<void> {
+  try {
+    const known = new Set(Object.values(reg).map((uri) => uri.split("/").pop()));
+    const names = await FileSystem.readDirectoryAsync(DIR);
+    for (const name of names) {
+      if (!known.has(name)) {
+        await FileSystem.deleteAsync(DIR + name, { idempotent: true }).catch(() => {});
+      }
+    }
+  } catch {}
 }
 
 /** Download a track for offline use. Returns the local uri, or null on failure. */

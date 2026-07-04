@@ -42,5 +42,16 @@ export async function pickAndUploadAvatar(userId: string): Promise<string | null
 
   if (updateError) throw updateError;
 
+  // Best effort: remove older avatar files so replaced photos don't pile up
+  // in storage. The new file is excluded; failures never block the update.
+  try {
+    const newName = path.split("/").pop();
+    const { data: files } = await supabase.storage.from("avatars").list(userId, { limit: 100 });
+    const stale = (files ?? [])
+      .filter((f) => f.name !== newName)
+      .map((f) => `${userId}/${f.name}`);
+    if (stale.length > 0) await supabase.storage.from("avatars").remove(stale);
+  } catch {}
+
   return publicUrl;
 }

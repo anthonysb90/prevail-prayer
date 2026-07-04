@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
 import { PrayerRequest, PrayerStatus, PrayerUpdate } from "@/types";
+import { cancelLocalRemindersForPrayer } from "@/lib/prayerReminders";
+import { removePrayerImage } from "@/lib/prayerImages";
 
 const KEY = "prayer_requests";
 
@@ -271,12 +273,27 @@ export function useDeletePrayer() {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      // Grab the image path before the row (and its cascades) disappear.
+      const { data: row } = await supabase
+        .from("prayer_requests")
+        .select("image_path")
+        .eq("id", id)
+        .eq("user_id", user!.id)
+        .maybeSingle();
+
+      // Cancel on-device notifications for this prayer's reminders. The DB
+      // rows cascade with the delete, but local notifications don't.
+      await cancelLocalRemindersForPrayer(id);
+
       const { error } = await supabase
         .from("prayer_requests")
         .delete()
         .eq("id", id)
         .eq("user_id", user!.id);
       if (error) throw error;
+
+      // Best effort: remove the photo from storage so no orphaned file remains.
+      if (row?.image_path) await removePrayerImage(row.image_path);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [KEY, user?.id] });

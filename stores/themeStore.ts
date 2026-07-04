@@ -43,7 +43,14 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     set((s) => ({ pref, isDark: resolveIsDark(pref, s.systemScheme) }));
     try { await AsyncStorage.setItem(STORAGE_KEY, pref); } catch {}
     if (userId) {
-      supabase.from("profiles").update({ theme_pref: pref }).eq("id", userId).then(() => {});
+      // Fire-and-forget sync to the profile; local pref is already applied.
+      supabase
+        .from("profiles")
+        .update({ theme_pref: pref })
+        .eq("id", userId)
+        .then(({ error }) => {
+          if (error) console.warn("theme_pref sync failed:", error.message);
+        });
     }
   },
 }));

@@ -9,8 +9,9 @@
 //   - "text":  free, soft-capped at TEXT_CAP/month + length guard. Cheap model.
 //
 // Pro is verified server-side (the client's word isn't trusted): admin "comp"
-// (profiles.comp_until) OR an active RevenueCat entitlement. Trial vs paid is
-// read from the RevenueCat entitlement's period_type.
+// (profiles.comp_until) OR an active RevenueCat entitlement, falling back to a
+// server-derived free-trial check (profiles.subscription_status + created_at).
+// Nothing in the request body affects the tier.
 //
 // Required secrets:
 //   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  (provided by the platform)
@@ -34,6 +35,7 @@ const cors = {
 };
 
 const ENTITLEMENT_ID = "Prevail Prayer Pro";
+const TRIAL_DAYS = 14;       // must match lib/trial.ts on the client
 const PHOTO_CAP = 5;         // paid / comped photo scans per month
 const TRIAL_PHOTO_CAP = 2;   // photo scans during the free trial
 const TEXT_CAP = 60;         // free text imports per month (abuse guard)
@@ -83,11 +85,9 @@ Deno.serve(async (req: Request) => {
     const period = new Date().toISOString().slice(0, 7); // 'YYYY-MM' UTC
 
     // ---- Pro gate + per-tier cap (photo only) ------------------------------
-    const claimPremium = payload?.premium === true;
-    const claimTrial = payload?.trial === true;
     let photoCap = PHOTO_CAP;
     if (mode === "photo") {
-      const tier = await callerTier(admin, userId, claimPremium, claimTrial);
+      const tier = await callerTier(admin, userId);
       if (tier === "none") return json({ error: "Photo import is a Pro feature.", code: "not_pro" }, 403);
       photoCap = tier === "trial" ? TRIAL_PHOTO_CAP : PHOTO_CAP;
     }
@@ -262,10 +262,12 @@ async function callGemini(model: string, images: ImageInput[], promptText: strin
 async function callerTier(
   admin: ReturnType<typeof createClient>,
   userId: string,
-  claimPremium: boolean,
-  claimTrial: boolean,
 ): Promise<Tier> {
-  const { data: profile } = await admin.from("profiles").select("comp_until").eq("id", userId).maybeSingle();
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("comp_until, subscription_status, created_at")
+    .eq("id", userId)
+    .maybeSingle();
   const compUntil = profile?.comp_until ? new Date(profile.comp_until).getTime() : 0;
   if (compUntil > Date.now()) return "comp";
 
@@ -283,12 +285,18 @@ async function callerTier(
         if (active) return ent.period_type === "trial" ? "trial" : "paid";
       }
     } catch (_e) {
-      // fall through to the client's claim
+      // fall through to the server-derived trial check
     }
   }
 
-  // Fallback: trust the app's own subscription state (it already gates the UI).
-  if (claimPremium) return claimTrial ? "trial" : "paid";
+  // Fallback: derive the free trial entirely server-side from the profile.
+  // Never trust anything from the request body — a caller could claim any tier.
+  if (profile?.subscription_status === "trial" && profile?.created_at) {
+    const start = new Date(profile.created_at).getTime();
+    if (!Number.isNaN(start) && Date.now() < start + TRIAL_DAYS * 24 * 60 * 60 * 1000) {
+      return "trial";
+    }
+  }
   return "none";
 }
 

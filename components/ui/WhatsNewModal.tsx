@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Modal, View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { Modal, View, Text, TouchableOpacity, ScrollView, useWindowDimensions } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "@/hooks/useTheme";
 import { Icon } from "@/components/ui/Icon";
@@ -14,6 +14,7 @@ import { CURRENT_RELEASE, WHATS_NEW_STORAGE_KEY } from "@/constants/changelog";
 export function WhatsNewModal() {
   const Theme = useTheme();
   const { user } = useAuthStore();
+  const { height: screenHeight } = useWindowDimensions();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -44,7 +45,7 @@ export function WhatsNewModal() {
             <Text style={{ fontFamily: Theme.font.sansMed, fontSize: 12, color: "rgba(255,255,255,0.85)", marginTop: 4 }}>Version {CURRENT_RELEASE.version}</Text>
           </View>
 
-          <ScrollView style={{ maxHeight: 320 }} contentContainerStyle={{ padding: 22 }}>
+          <ScrollView style={{ maxHeight: Math.min(screenHeight * 0.45, 420) }} contentContainerStyle={{ padding: 22 }}>
             {CURRENT_RELEASE.highlights.map((h, i) => (
               <View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, marginBottom: 16 }}>
                 <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: Theme.primarySoft, alignItems: "center", justifyContent: "center", marginTop: 1 }}>

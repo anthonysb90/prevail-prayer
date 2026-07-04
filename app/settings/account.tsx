@@ -5,6 +5,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import * as Notifications from "expo-notifications";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
 import { pickAndUploadAvatar } from "@/lib/avatar";
@@ -105,6 +106,9 @@ export default function AccountScreen() {
               Alert.alert("Could not delete account", "Something went wrong. Please try again, or contact support@prevailprayer.com.");
               return;
             }
+            // The account is gone — clear every scheduled prayer reminder on
+            // this device so nothing fires for data that no longer exists.
+            try { await Notifications.cancelAllScheduledNotificationsAsync(); } catch {}
             await signOut();
           },
         },

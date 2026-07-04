@@ -93,10 +93,10 @@ export function PrayerReminders({ prayerId, title, detail }: PrayerRemindersProp
           <View key={r.id} style={{ backgroundColor: Theme.card, borderRadius: Theme.radius.card, borderWidth: 1, borderColor: Theme.cardBorder, padding: 14, marginBottom: 10, flexDirection: "row", alignItems: "center", gap: 12 }}>
             <Icon name="bell" size={18} color={r.enabled ? Theme.primary : Theme.textFaint} />
             <Text style={{ flex: 1, fontFamily: Theme.font.sansSemi, fontSize: 14, color: r.enabled ? Theme.text : Theme.textFaint }}>{reminderLabel(r)}</Text>
-            <TouchableOpacity onPress={() => handleToggle(r)}>
+            <TouchableOpacity onPress={() => handleToggle(r)} hitSlop={{ top: 14, bottom: 14, left: 10, right: 10 }}>
               <Text style={{ fontFamily: Theme.font.sansSemi, fontSize: 13, color: r.enabled ? Theme.primary : Theme.textFaint }}>{r.enabled ? "On" : "Off"}</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleDelete(r)}>
+            <TouchableOpacity onPress={() => handleDelete(r)} hitSlop={{ top: 14, bottom: 14, left: 10, right: 14 }}>
               <Icon name="trash" size={16} color={Theme.textFaint} />
             </TouchableOpacity>
           </View>
