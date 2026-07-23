@@ -16,6 +16,7 @@ import { useAppLockStore } from "@/stores/appLockStore";
 import { LockScreen } from "@/components/ui/LockScreen";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/authStore";
+import { useAuthDeepLink } from "@/hooks/useAuthDeepLink";
 import { initializePurchases, getSubscriptionStatus, onCustomerInfoUpdate } from "@/lib/purchases";
 import { isTrialActive, isComped } from "@/lib/trial";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
@@ -59,6 +60,10 @@ function AuthGuard() {
   // Last known RevenueCat entitlement, so recomputing from the profile never
   // clobbers a real paid subscription.
   const rcPremiumRef = useRef(false);
+
+  // Completes sign-in when the user taps a Supabase confirmation/recovery
+  // email that deep-links back into the app via prevailprayer://.
+  useAuthDeepLink();
 
   const recomputePremium = (p = useAuthStore.getState().profile) => {
     setIsPremium(rcPremiumRef.current || isTrialActive(p) || isComped(p));

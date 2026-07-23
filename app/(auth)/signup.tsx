@@ -60,7 +60,16 @@ export default function SignupScreen() {
       options: { data: { display_name: displayName.trim(), birthday: birthdayIso } },
     });
     if (error) {
-      Alert.alert("Sign up failed", error.message);
+      // Supabase's built-in mailer is rate-limited; surface that plainly
+      // instead of its raw "email rate limit exceeded" message.
+      if (error.status === 429 || /rate limit/i.test(error.message)) {
+        Alert.alert(
+          "Too many signups right now",
+          "Our email system is temporarily limiting new confirmations. Please try again in a few minutes."
+        );
+      } else {
+        Alert.alert("Sign up failed", error.message);
+      }
       setLoading(false);
       return;
     }
