@@ -1,6 +1,8 @@
 import { View, Text, TouchableOpacity, ScrollView, Image, Share, Linking, Alert, Platform, Switch } from "react-native";
 import { useState, useEffect } from "react";
 import * as StoreReview from "expo-store-review";
+import * as Updates from "expo-updates";
+import * as Application from "expo-application";
 import { useAppLockStore } from "@/stores/appLockStore";
 import { isBiometricAvailable, getBiometricLabel, authenticate } from "@/lib/biometrics";
 import { useRouter } from "expo-router";
@@ -74,6 +76,32 @@ export default function SettingsScreen() {
 
   const name = profile?.display_name ?? "Friend";
   const initial = name.trim().charAt(0).toUpperCase();
+
+  // Which build/OTA update this device is actually running — the quickest
+  // way to confirm an `eas update` landed without hunting through Xcode or
+  // the EAS dashboard. Tap it for the full detail.
+  const appVersion = Application.nativeApplicationVersion ?? "—";
+  const buildNumber = Application.nativeBuildVersion ?? "—";
+  const updateSummary = Updates.isEmbeddedLaunch
+    ? "Embedded build (no OTA update)"
+    : `Update ${Updates.updateId?.slice(0, 8) ?? "—"} · ${Updates.channel ?? "—"}`;
+
+  const showUpdateDetails = () => {
+    Alert.alert(
+      "Build Info",
+      [
+        `Version: ${appVersion} (${buildNumber})`,
+        `Channel: ${Updates.channel ?? "—"}`,
+        `Runtime version: ${Updates.runtimeVersion ?? "—"}`,
+        Updates.isEmbeddedLaunch
+          ? "Running the build's embedded bundle — no OTA update applied."
+          : `Update ID: ${Updates.updateId ?? "—"}`,
+        Updates.createdAt ? `Published: ${Updates.createdAt.toLocaleString()}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n")
+    );
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: Theme.bg }}>
@@ -184,8 +212,13 @@ export default function SettingsScreen() {
         </TouchableOpacity>
 
         <Text style={{ fontFamily: Theme.font.serifReg, fontSize: 13, color: Theme.textFaint, textAlign: "center", marginTop: 24 }}>
-          Prevail · v1.0 — "Continue steadfastly in prayer."
+          Prevail · v{appVersion} — "Continue steadfastly in prayer."
         </Text>
+        <TouchableOpacity onPress={showUpdateDetails} activeOpacity={0.6} style={{ marginTop: 6 }}>
+          <Text style={{ fontFamily: Theme.font.sans, fontSize: 11, color: Theme.textFaint, textAlign: "center", opacity: 0.7 }}>
+            {updateSummary}
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
