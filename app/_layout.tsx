@@ -5,6 +5,8 @@ import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFonts } from "expo-font";
+import * as Updates from "expo-updates";
+import { analytics } from "@/lib/analytics";
 import { Newsreader_400Regular, Newsreader_500Medium, Newsreader_600SemiBold } from "@expo-google-fonts/newsreader";
 import { HankenGrotesk_400Regular, HankenGrotesk_500Medium, HankenGrotesk_600SemiBold, HankenGrotesk_700Bold } from "@expo-google-fonts/hanken-grotesk";
 import * as SplashScreen from "expo-splash-screen";
@@ -249,6 +251,35 @@ export default function RootLayout() {
   useEffect(() => {
     if (fontsLoaded || fontError) SplashScreen.hideAsync();
   }, [fontsLoaded, fontError]);
+
+  // Diagnostic instrumentation for the silent OTA update failure. There's no
+  // Xcode/Console.app access to read native device logs, so this surfaces the
+  // real result of the automatic `checkAutomatically: "ON_LOAD"` check as
+  // PostHog events instead:
+  //  - "ota_launch_snapshot" fires on every launch regardless of what the
+  //    update check does, so if we NEVER see the event below, we know the
+  //    native check itself isn't running/emitting at all.
+  //  - "ota_update_event" mirrors whatever Updates.addListener reports —
+  //    including the real error message if the check or download fails.
+  useEffect(() => {
+    analytics.capture("ota_launch_snapshot", {
+      isEmbeddedLaunch: Updates.isEmbeddedLaunch,
+      updateId: Updates.updateId,
+      channel: Updates.channel,
+      runtimeVersion: Updates.runtimeVersion,
+      createdAt: Updates.createdAt ? Updates.createdAt.toISOString() : null,
+    });
+
+    const subscription = Updates.addListener((event) => {
+      analytics.capture("ota_update_event", {
+        type: event.type,
+        message: (event as any).message ?? null,
+        hasManifest: !!(event as any).manifest,
+      });
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   // Render once fonts load OR if they error out — never hang on a blank screen
   if (!fontsLoaded && !fontError) return null;
